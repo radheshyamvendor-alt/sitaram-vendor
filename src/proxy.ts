@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { AUTH_CONSTANTS } from "@/services/auth.constants";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Retrieve the refresh token cookie
@@ -35,7 +35,7 @@ export function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-// Limit the middleware to run only on relevant routes
+// Limit the proxy to run only on relevant routes
 export const config = {
   matcher: [
     "/dashboard/:path*",
