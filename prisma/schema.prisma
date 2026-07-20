@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,7 +10,7 @@ datasource db {
 model Medicine {
   id          String          @id @default(uuid())
   name        String
-  category    String          // Tablets, Capsules, Syrups, Injections, Drops, Ointments, Medical Devices, Other
+  category    String
   description String?
   price       Float
   stock       Int
@@ -40,12 +37,12 @@ model Order {
   id                 String          @id @default(uuid())
   prescriptionNumber String?
   patientId          String?
-  patient            Patient?        @relation(fields: [patientId], references: [id])
-  status             String          // PENDING, SHIPPED, COMPLETED
+  status             String
   otp                String?
-  chemistEmail       String?
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
+  chemistEmail       String?
+  patient            Patient?        @relation(fields: [patientId], references: [id])
   orderMedicines     OrderMedicine[]
 }
 
@@ -53,8 +50,8 @@ model OrderMedicine {
   orderId    String
   medicineId String
   quantity   Int
-  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   medicine   Medicine @relation(fields: [medicineId], references: [id])
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@id([orderId, medicineId])
 }
