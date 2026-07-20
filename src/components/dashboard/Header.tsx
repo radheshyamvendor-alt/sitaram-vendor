@@ -16,7 +16,7 @@ export default function Header({ title, icon, rightActions }: HeaderProps) {
   const pathname = usePathname();
 
   // Determine dynamic defaults based on pathname
-  let defaultTitle = "Radheshyam Medical";
+  let defaultTitle = "Sitaram Medical";
   let defaultIcon = "medical_services";
 
   if (pathname === "/dashboard") {
@@ -79,13 +79,13 @@ export default function Header({ title, icon, rightActions }: HeaderProps) {
           <div className="flex items-center gap-6 xl:gap-8">
             <Link href="/dashboard" className="flex items-center hover:opacity-90 transition-opacity gap-2">
               <span className="text-xl sm:text-2xl font-bold text-[#003d9b] xl:hidden">
-                Radheshyam Medical
+                Sitaram Medical
               </span>
               <div className="hidden xl:flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#003d9b] to-[#0052cc] flex items-center justify-center text-white shadow-sm shrink-0">
                   <span className="material-symbols-outlined text-[18px] font-bold" style={{ fontVariationSettings: "'FILL' 1" }}>pulse</span>
                 </div>
-                <span className="text-lg font-black text-[#003d9b] tracking-tight">RM</span>
+                <span className="text-lg font-black text-[#003d9b] tracking-tight">SM</span>
               </div>
             </Link>
             {/* Navigation Links - Desktop */}

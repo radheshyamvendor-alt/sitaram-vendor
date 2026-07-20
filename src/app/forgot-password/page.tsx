@@ -63,7 +63,7 @@ export default function ForgotPassword() {
         >
           <span className="material-symbols-outlined">arrow_back</span>
         </Link>
-        <span className="font-headline-md text-headline-md font-bold text-primary text-center">Radheshyam Medical</span>
+        <span className="font-headline-md text-headline-md font-bold text-primary text-center">Sitaram Medical</span>
         <div className="w-10"></div> {/* Spacer for symmetry */}
       </div>
 
@@ -175,7 +175,7 @@ export default function ForgotPassword() {
           </p>
 
           <div className="pt-6 border-t border-outline-variant text-center">
-            <p className="text-[10px] text-outline uppercase tracking-widest">© 2026 Radheshyam Medical Group. All Rights Reserved.</p>
+            <p className="text-[10px] text-outline uppercase tracking-widest">© 2026 Sitaram Medical Group. All Rights Reserved.</p>
           </div>
         </div>
       </form>

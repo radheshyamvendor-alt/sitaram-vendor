@@ -181,7 +181,7 @@ export default function Register() {
         >
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
-        <span className="font-headline-md text-headline-md font-bold text-primary">Radheshyam Medical</span>
+        <span className="font-headline-md text-headline-md font-bold text-primary">Sitaram Medical</span>
         <div className="w-10"></div> {/* Spacer for symmetry */}
       </div>
 
@@ -466,7 +466,7 @@ export default function Register() {
                   <h3 className="font-semibold text-body-lg">Privacy &amp; Regulatory Standard</h3>
                 </div>
                 <p className="text-sm text-on-surface-variant leading-relaxed">
-                  Radheshyam Medical matches enterprise-grade healthcare communication and database storage guidelines. All operations are processed using AES-256 bit encryption to ensure confidentiality, integrity, and availability.
+                  Sitaram Medical matches enterprise-grade healthcare communication and database storage guidelines. All operations are processed using AES-256 bit encryption to ensure confidentiality, integrity, and availability.
                 </p>
               </div>
 
@@ -492,7 +492,7 @@ export default function Register() {
                     className="mt-1 w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary"
                   />
                   <span className="font-body-sm text-body-sm text-on-surface-variant leading-tight select-none">
-                    I authorize Radheshyam Medical to store facility contact credentials and location parameters.
+                    I authorize Sitaram Medical to store facility contact credentials and location parameters.
                   </span>
                 </label>
               </div>

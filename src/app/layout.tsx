@@ -6,7 +6,7 @@ import { AuthProvider } from "@/providers/AuthProvider";
 import { CartProvider } from "@/providers/CartProvider";
 
 export const metadata: Metadata = {
-  title: "Radheshyam Medical - Authentication Portal",
+  title: "Sitaram Medical - Authentication Portal",
   description: "Secured Access for Medical Professionals & Pharmacies",
 };
 

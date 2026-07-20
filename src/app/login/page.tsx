@@ -67,7 +67,7 @@ export default function Login() {
       {/* Brand & Spacer */}
       <div className="flex items-center justify-between mb-8">
         <div className="w-10"></div>
-        <span className="font-headline-md text-headline-md font-bold text-primary text-center">Radheshyam Medical</span>
+        <span className="font-headline-md text-headline-md font-bold text-primary text-center">Sitaram Medical</span>
         <div className="w-10"></div> {/* Spacer for symmetry */}
       </div>
 
@@ -232,7 +232,7 @@ export default function Login() {
                 <span className="font-label-sm text-label-sm uppercase tracking-wider">AES-256 Encrypted</span>
               </div>
             </div>
-            <p className="text-[10px] text-outline uppercase tracking-widest pt-2">© 2026 Radheshyam Medical Group. All Rights Reserved.</p>
+            <p className="text-[10px] text-outline uppercase tracking-widest pt-2">© 2026 Sitaram Medical Group. All Rights Reserved.</p>
           </div>
         </div>
       </form>
