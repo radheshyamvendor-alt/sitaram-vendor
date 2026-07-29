@@ -44,17 +44,38 @@ export default function OcrPage() {
   const [pendingResult, setPendingResult] = useState<OcrResult | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  const handleUpdateMedQty = (medName: string, newQty: number) => {
+  const handleAddMedicine = () => {
     if (!pendingResult) return;
-    const updatedMeds = pendingResult.medicines.map((med) =>
-      med.name === medName ? { ...med, quantity: Math.max(1, newQty) } : med
-    );
+    const newMed: ExtractedMedicine = {
+      id: null,
+      name: "",
+      price: null,
+      quantity: 1,
+      stock: null,
+    };
+    setPendingResult({
+      ...pendingResult,
+      medicines: [...pendingResult.medicines, newMed],
+    });
+  };
+
+  const handleUpdateMedName = (index: number, newName: string) => {
+    if (!pendingResult) return;
+    const updatedMeds = [...pendingResult.medicines];
+    updatedMeds[index] = { ...updatedMeds[index], name: newName };
     setPendingResult({ ...pendingResult, medicines: updatedMeds });
   };
 
-  const handleRemoveMed = (medName: string) => {
+  const handleUpdateMedQtyIndex = (index: number, newQty: number) => {
     if (!pendingResult) return;
-    const updatedMeds = pendingResult.medicines.filter((med) => med.name !== medName);
+    const updatedMeds = [...pendingResult.medicines];
+    updatedMeds[index] = { ...updatedMeds[index], quantity: Math.max(1, newQty) };
+    setPendingResult({ ...pendingResult, medicines: updatedMeds });
+  };
+
+  const handleRemoveMedIndex = (index: number) => {
+    if (!pendingResult) return;
+    const updatedMeds = pendingResult.medicines.filter((_, i) => i !== index);
     setPendingResult({ ...pendingResult, medicines: updatedMeds });
   };
 
@@ -216,14 +237,25 @@ export default function OcrPage() {
               </div>
 
               {isOcrProcessing ? (
-                <div className="h-64 border border-outline-variant rounded-2xl bg-surface-container-lowest flex flex-col items-center justify-center relative overflow-hidden">
-                  <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-85 shadow-[0_0_10px_#003d9b] animate-[bounce_2.5s_infinite_linear]"></div>
-                  <svg className="animate-spin h-10 w-10 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <h4 className="mt-4 font-bold text-on-surface text-base">Radheshyam OCR Active</h4>
-                  <p className="text-xs text-on-surface-variant mt-1 animate-pulse">Extracting credentials &amp; matching medicines...</p>
+                <div className="h-64 border border-primary/20 rounded-2xl bg-surface-container-lowest flex flex-col items-center justify-center relative overflow-hidden p-6 shadow-inner">
+                  {/* Top laser scan line */}
+                  <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent shadow-[0_0_12px_#003d9b] animate-pulse"></div>
+                  
+                  {/* Glowing Spinner Container */}
+                  <div className="relative flex items-center justify-center">
+                    <div className="absolute w-16 h-16 rounded-full bg-primary/10 animate-ping"></div>
+                    <div className="w-12 h-12 rounded-full border-3 border-primary/20 border-t-primary animate-spin"></div>
+                  </div>
+
+                  <div className="mt-5 text-center space-y-1">
+                    <span className="px-3 py-1 bg-primary/10 text-primary font-bold text-xs rounded-full inline-block border border-primary/20">
+                      Sitaram OCR AI Active
+                    </span>
+                    <h4 className="font-bold text-on-surface text-base">Scanning Prescription...</h4>
+                    <p className="text-xs text-on-surface-variant animate-pulse max-w-xs mx-auto">
+                      Extracting patient credentials &amp; prescription medicines
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div
@@ -362,51 +394,80 @@ export default function OcrPage() {
 
               {/* Extracted medicines list */}
               <div className="border border-outline-variant rounded-xl p-4 bg-surface-container-lowest space-y-3">
-                <h4 className="font-bold text-on-surface border-b border-outline-variant pb-2 text-sm uppercase tracking-wider text-primary">Extracted Medicines</h4>
+                <div className="flex items-center justify-between border-b border-outline-variant pb-2 gap-2">
+                  <h4 className="font-bold text-on-surface text-xs sm:text-sm uppercase tracking-wider text-primary truncate">
+                    Extracted Medicines ({pendingResult.medicines.length})
+                  </h4>
+                  {isEditing && (
+                    <button
+                      type="button"
+                      onClick={handleAddMedicine}
+                      className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-xs font-bold transition-all flex items-center gap-1 shrink-0 whitespace-nowrap active:scale-95"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">add</span>
+                      <span>Add Medicine</span>
+                    </button>
+                  )}
+                </div>
+
                 <div className="divide-y divide-outline-variant">
                   {pendingResult.medicines.length === 0 ? (
                     <div className="py-4 text-center text-sm text-on-surface-variant font-medium">
-                      No medicines detected.
+                      No medicines detected. Click "+ Add Medicine" to add item.
                     </div>
                   ) : (
-                    pendingResult.medicines.map((med) => (
-                      <div key={med.name} className="py-3 flex justify-between items-center text-sm gap-2">
-                        <div className="flex-grow">
-                          <span className="font-semibold text-on-surface">{med.name}</span>
-                        </div>
+                    pendingResult.medicines.map((med, idx) => (
+                      <div key={idx} className="py-2.5 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 text-sm">
                         {isEditing ? (
-                          <div className="flex items-center gap-3">
+                          <input
+                            type="text"
+                            value={med.name}
+                            onChange={(e) => handleUpdateMedName(idx, e.target.value)}
+                            placeholder="Medicine name"
+                            className="w-full sm:flex-1 px-3 py-2 bg-surface border border-outline-variant rounded-lg font-semibold text-on-surface focus:border-primary outline-none text-xs"
+                          />
+                        ) : (
+                          <div className="flex-grow">
+                            <span className="font-semibold text-on-surface">{med.name}</span>
+                          </div>
+                        )}
+
+                        {isEditing ? (
+                          <div className="flex items-center justify-between w-full sm:w-auto gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-outline-variant/40">
                             <div className="flex items-center border border-outline-variant rounded-lg overflow-hidden bg-surface">
                               <button
                                 type="button"
-                                onClick={() => handleUpdateMedQty(med.name, med.quantity - 1)}
-                                className="px-2 py-1 hover:bg-surface-container text-primary font-bold transition-all active:scale-75"
+                                onClick={() => handleUpdateMedQtyIndex(idx, med.quantity - 1)}
+                                className="w-8 h-8 flex items-center justify-center hover:bg-surface-container text-primary font-bold transition-all active:scale-75"
+                                aria-label="Decrease quantity"
                               >
-                                <span className="material-symbols-outlined text-[16px]">remove</span>
+                                <span className="material-symbols-outlined text-[14px]">remove</span>
                               </button>
-                              <span className="px-3 py-1 font-bold text-on-surface text-xs select-none">
+                              <span className="px-3 py-1 font-bold text-on-surface text-xs select-none min-w-[24px] text-center">
                                 {med.quantity}
                               </span>
                               <button
                                 type="button"
-                                onClick={() => handleUpdateMedQty(med.name, med.quantity + 1)}
-                                className="px-2 py-1 hover:bg-surface-container text-primary font-bold transition-all active:scale-75"
+                                onClick={() => handleUpdateMedQtyIndex(idx, med.quantity + 1)}
+                                className="w-8 h-8 flex items-center justify-center hover:bg-surface-container text-primary font-bold transition-all active:scale-75"
+                                aria-label="Increase quantity"
                               >
-                                <span className="material-symbols-outlined text-[16px]">add</span>
+                                <span className="material-symbols-outlined text-[14px]">add</span>
                               </button>
                             </div>
                             <button
                               type="button"
-                              onClick={() => handleRemoveMed(med.name)}
-                              className="text-error hover:bg-error-container/10 p-2 rounded-full transition-colors"
+                              onClick={() => handleRemoveMedIndex(idx)}
+                              className="w-8 h-8 flex items-center justify-center text-error hover:bg-error-container/10 rounded-lg transition-colors"
                               title="Delete medicine"
+                              aria-label="Delete medicine"
                             >
                               <span className="material-symbols-outlined text-[18px]">delete</span>
                             </button>
                           </div>
                         ) : (
-                          <div className="text-right">
-                            <span className="font-bold text-primary">Qty: {med.quantity}</span>
+                          <div className="text-right shrink-0">
+                            <span className="font-bold text-primary text-xs">Qty: {med.quantity}</span>
                           </div>
                         )}
                       </div>

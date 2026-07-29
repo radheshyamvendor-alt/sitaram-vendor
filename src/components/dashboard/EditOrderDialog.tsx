@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react";
 import { UpdateOrderInput } from "@/app/actions/order";
 
+export interface MedicineItem {
+  name: string;
+  quantity: number;
+}
+
 interface EditOrderDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -11,6 +16,9 @@ interface EditOrderDialogProps {
     id: string;
     prescriptionNumber: string | null;
     status: string;
+    patientName?: string | null;
+    patientMobile?: string | null;
+    patientAddress?: string | null;
     medicines?: string | null;
     patient?: {
       name: string;
@@ -18,6 +26,33 @@ interface EditOrderDialogProps {
       address: string;
     } | null;
   } | null;
+}
+
+function parseMedicinesString(raw?: string | null): MedicineItem[] {
+  if (!raw || !raw.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => ({
+        name: String(item.name || ""),
+        quantity: Number(item.quantity) || 1,
+      }));
+    }
+  } catch {
+    // Failover for legacy comma-separated text e.g. "TELSARTAN 80 (x8), AMLO 5 (x15)"
+    const items = raw.split(",").map((s) => s.trim()).filter(Boolean);
+    return items.map((itemStr) => {
+      const match = itemStr.match(/^(.+?)(?:\s*\(x(\d+)\))?$/i);
+      if (match) {
+        return {
+          name: match[1].trim(),
+          quantity: match[2] ? parseInt(match[2], 10) : 1,
+        };
+      }
+      return { name: itemStr, quantity: 1 };
+    });
+  }
+  return [];
 }
 
 export default function EditOrderDialog({
@@ -30,23 +65,44 @@ export default function EditOrderDialog({
   const [patientName, setPatientName] = useState("");
   const [patientMobile, setPatientMobile] = useState("");
   const [patientAddress, setPatientAddress] = useState("");
-  const [medicinesText, setMedicinesText] = useState("");
+  const [medicinesList, setMedicinesList] = useState<MedicineItem[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (order) {
+    if (order && isOpen) {
       setPrescriptionNo(order.prescriptionNumber || "");
-      setPatientName(order.patient?.name || "");
-      setPatientMobile(order.patient?.mobile || "");
-      setPatientAddress(order.patient?.address || "");
-      setMedicinesText(order.medicines || "");
+      setPatientName(order.patientName || order.patient?.name || "");
+      setPatientMobile(order.patientMobile || order.patient?.mobile || "");
+      setPatientAddress(order.patientAddress || order.patient?.address || "");
+      setMedicinesList(parseMedicinesString(order.medicines));
       setErrorMsg(null);
     }
   }, [order, isOpen]);
 
   if (!isOpen || !order) return null;
+
+  const handleAddMedicine = () => {
+    setMedicinesList([...medicinesList, { name: "", quantity: 1 }]);
+  };
+
+  const handleUpdateMedicineName = (index: number, newName: string) => {
+    const updated = [...medicinesList];
+    updated[index].name = newName;
+    setMedicinesList(updated);
+  };
+
+  const handleUpdateMedicineQty = (index: number, delta: number) => {
+    const updated = [...medicinesList];
+    const newQty = Math.max(1, (updated[index].quantity || 1) + delta);
+    updated[index].quantity = newQty;
+    setMedicinesList(updated);
+  };
+
+  const handleRemoveMedicine = (index: number) => {
+    setMedicinesList(medicinesList.filter((_, i) => i !== index));
+  };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,6 +127,13 @@ export default function EditOrderDialog({
       return;
     }
 
+    // Filter valid medicines with name
+    const validMeds = medicinesList
+      .map((m) => ({ name: m.name.trim(), quantity: Math.max(1, m.quantity || 1) }))
+      .filter((m) => m.name.length > 0);
+
+    const serializedMedicines = JSON.stringify(validMeds);
+
     try {
       await onSubmit(order.id, {
         prescriptionNumber: prescriptionNo,
@@ -79,7 +142,7 @@ export default function EditOrderDialog({
           mobile: patientMobile,
           address: patientAddress,
         },
-        medicines: medicinesText,
+        medicines: serializedMedicines,
       });
       onClose();
     } catch (err: any) {
@@ -91,9 +154,9 @@ export default function EditOrderDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-on-background/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pb-20 md:pb-4 bg-on-background/50 backdrop-blur-sm">
       <div
-        className="w-full max-w-md bg-surface border border-outline-variant rounded-2xl shadow-xl overflow-hidden glass-card animate-in fade-in zoom-in-95 duration-200"
+        className="w-full max-w-lg bg-surface border border-outline-variant rounded-2xl shadow-2xl overflow-hidden glass-card animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -110,7 +173,7 @@ export default function EditOrderDialog({
         </div>
 
         {/* Modal Content */}
-        <form onSubmit={handleFormSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+        <form onSubmit={handleFormSubmit} className="p-6 space-y-4 max-h-[65vh] sm:max-h-[75vh] overflow-y-auto">
           {errorMsg && (
             <div className="p-3 bg-error-container/30 border border-error text-error text-sm rounded-xl flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px]">error</span>
@@ -179,18 +242,76 @@ export default function EditOrderDialog({
             />
           </div>
 
-          {/* Medicines Summary */}
-          <div className="space-y-1.5">
-            <label className="font-label-md text-label-md text-on-surface-variant ml-1" htmlFor="medicinesText">
-              Prescription Medicines
-            </label>
-            <textarea
-              id="medicinesText"
-              value={medicinesText}
-              onChange={(e) => setMedicinesText(e.target.value)}
-              className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all font-body-md text-body-md placeholder:text-outline/60 text-on-surface min-h-[60px]"
-              placeholder="e.g. MOXICIP EYE 5ML x1"
-            />
+          {/* Medicines Items List */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between border-b border-outline-variant pb-2 gap-2">
+              <label className="font-bold text-xs sm:text-sm text-primary uppercase tracking-wider truncate">
+                Prescription Medicines ({medicinesList.length})
+              </label>
+              <button
+                type="button"
+                onClick={handleAddMedicine}
+                className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-xs font-bold transition-all flex items-center gap-1 shrink-0 whitespace-nowrap active:scale-95"
+              >
+                <span className="material-symbols-outlined text-[16px]">add</span>
+                <span>Add Medicine</span>
+              </button>
+            </div>
+
+            <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
+              {medicinesList.length === 0 ? (
+                <div className="text-center py-4 text-xs text-on-surface-variant bg-surface-container-lowest border border-dashed border-outline-variant rounded-xl">
+                  No medicines added yet. Click "+ Add Medicine" above.
+                </div>
+              ) : (
+                medicinesList.map((med, idx) => (
+                  <div key={idx} className="flex flex-wrap sm:flex-nowrap items-center gap-2 bg-surface-container-lowest p-2.5 border border-outline-variant rounded-xl shadow-xs">
+                    <input
+                      type="text"
+                      value={med.name}
+                      onChange={(e) => handleUpdateMedicineName(idx, e.target.value)}
+                      placeholder="Medicine name"
+                      className="w-full sm:flex-1 px-3 py-2 bg-surface border border-outline-variant rounded-lg text-xs text-on-surface font-semibold focus:border-primary outline-none"
+                    />
+
+                    <div className="flex items-center justify-between w-full sm:w-auto gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-outline-variant/40">
+                      {/* Quantity counter */}
+                      <div className="flex items-center border border-outline-variant rounded-lg overflow-hidden bg-surface">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateMedicineQty(idx, -1)}
+                          className="w-8 h-8 flex items-center justify-center hover:bg-surface-container text-primary font-bold transition-all active:scale-75"
+                          aria-label="Decrease quantity"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">remove</span>
+                        </button>
+                        <span className="px-3 py-1 font-bold text-on-surface text-xs select-none min-w-[24px] text-center">
+                          {med.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateMedicineQty(idx, 1)}
+                          className="w-8 h-8 flex items-center justify-center hover:bg-surface-container text-primary font-bold transition-all active:scale-75"
+                          aria-label="Increase quantity"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">add</span>
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMedicine(idx)}
+                        className="w-8 h-8 flex items-center justify-center text-error hover:bg-error-container/10 rounded-lg transition-colors"
+                        title="Remove medicine"
+                        aria-label="Remove medicine"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
           {/* Actions Footer */}

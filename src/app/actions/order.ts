@@ -412,19 +412,21 @@ export async function createDirectOrder(input: DirectOrderInput) {
       };
     }
 
+    const orderData: any = {
+      prescriptionNumber: rxNo,
+      patientName: input.patientName || null,
+      patientMobile: input.patientMobile || null,
+      patientAddress: input.patientAddress || null,
+      patientGender: input.patientGender || null,
+      patientAge: input.patientAge || null,
+      medicines: input.medicines || null,
+      status: "PENDING",
+      chemistId: input.chemistId || null,
+      chemistEmail: input.chemistEmail || null,
+    };
+
     const order = await prisma.order.create({
-      data: {
-        prescriptionNumber: rxNo,
-        patientName: input.patientName || null,
-        patientMobile: input.patientMobile || null,
-        patientAddress: input.patientAddress || null,
-        patientGender: input.patientGender || null,
-        patientAge: input.patientAge || null,
-        medicines: input.medicines || null,
-        status: "PENDING",
-        chemistId: input.chemistId || null,
-        chemistEmail: input.chemistEmail || null,
-      },
+      data: orderData,
     });
 
     revalidatePath("/dashboard");

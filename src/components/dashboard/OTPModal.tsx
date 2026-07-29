@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getLocalAccessToken } from "@/lib/axios";
 import { completeOrderLocal } from "@/app/actions/order";
@@ -25,6 +25,15 @@ export default function OTPModal({
   const otp = otpValues.join("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Reset states whenever modal is opened or prescriptionNumber changes
+  useEffect(() => {
+    if (isOpen) {
+      setOtpValues(Array(6).fill(""));
+      setErrorMsg(null);
+      setSuccessMsg(null);
+    }
+  }, [isOpen, prescriptionNumber]);
 
   // OTP Verification — calls HIS Chemist API directly
   const verifyMutation = useMutation({
@@ -158,17 +167,24 @@ export default function OTPModal({
     resendMutation.mutate();
   };
 
+  const handleModalClose = () => {
+    setOtpValues(Array(6).fill(""));
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-on-background/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pb-20 md:pb-4 bg-on-background/50 backdrop-blur-sm">
       <div
-        className="w-full max-w-sm bg-surface border border-outline-variant rounded-2xl shadow-xl overflow-hidden glass-card animate-in fade-in zoom-in-95 duration-200"
+        className="w-full max-w-sm bg-surface border border-outline-variant rounded-2xl shadow-2xl overflow-hidden glass-card animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-outline-variant flex items-center justify-between bg-surface-container-lowest">
           <h3 className="font-bold text-headline-sm text-on-surface">OTP Delivery Verification</h3>
           <button
-            onClick={onClose}
+            onClick={handleModalClose}
             className="w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container active:scale-90 transition-transform"
             type="button"
           >

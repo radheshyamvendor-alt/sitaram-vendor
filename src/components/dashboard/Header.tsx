@@ -128,7 +128,6 @@ export default function Header({ title, icon, rightActions }: HeaderProps) {
               {isDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-56 bg-white border border-[#e0e3e5] rounded-xl shadow-lg py-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
                   <div className="px-4 py-2 border-b border-[#e0e3e5]">
-                    <p className="text-[10px] font-bold text-[#737685] uppercase tracking-wider">Account</p>
                     <p className="text-sm font-semibold text-on-surface truncate mt-0.5">{user?.name || "Registered Chemist"}</p>
                     <p className="text-xs text-[#737685] truncate">{user?.email || "chemist@gmail.com"}</p>
                   </div>

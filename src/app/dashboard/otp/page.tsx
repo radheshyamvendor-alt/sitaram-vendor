@@ -173,7 +173,7 @@ export default function OTPVerificationPage() {
         <div className="bg-surface-container-lowest border border-outline-variant shadow-sm rounded-xl p-6 glass-card flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h2 className="text-headline-md font-bold text-on-surface mb-1">
-              Welcome back, {user?.name || "Chemist"}!
+              {user?.name || "Chemist"}!
             </h2>
             <p className="text-sm text-on-surface-variant">
               Scan prescriptions, track customer orders, and verify package deliveries securely.

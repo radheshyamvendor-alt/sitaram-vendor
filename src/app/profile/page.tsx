@@ -10,8 +10,10 @@ export default function Profile() {
   const { user, logout, refreshProfile } = useAuth();
 
   useEffect(() => {
-    refreshProfile();
-  }, [refreshProfile]);
+    if (!user) {
+      refreshProfile();
+    }
+  }, [user, refreshProfile]);
 
   return (
     <div className="min-h-screen bg-background trust-gradient pb-24 md:pb-12 text-on-surface">
