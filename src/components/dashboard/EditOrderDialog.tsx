@@ -11,18 +11,12 @@ interface EditOrderDialogProps {
     id: string;
     prescriptionNumber: string | null;
     status: string;
-    patient: {
+    medicines?: string | null;
+    patient?: {
       name: string;
       mobile: string;
       address: string;
     } | null;
-    orderMedicines: Array<{
-      medicineId: string;
-      quantity: number;
-      medicine: {
-        name: string;
-      };
-    }>;
   } | null;
 }
 
@@ -36,7 +30,7 @@ export default function EditOrderDialog({
   const [patientName, setPatientName] = useState("");
   const [patientMobile, setPatientMobile] = useState("");
   const [patientAddress, setPatientAddress] = useState("");
-  const [items, setItems] = useState<Array<{ medicineId: string; name: string; quantity: number }>>([]);
+  const [medicinesText, setMedicinesText] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -47,34 +41,12 @@ export default function EditOrderDialog({
       setPatientName(order.patient?.name || "");
       setPatientMobile(order.patient?.mobile || "");
       setPatientAddress(order.patient?.address || "");
-      setItems(
-        order.orderMedicines.map((m) => ({
-          medicineId: m.medicineId,
-          name: m.medicine.name,
-          quantity: m.quantity,
-        }))
-      );
+      setMedicinesText(order.medicines || "");
       setErrorMsg(null);
     }
   }, [order, isOpen]);
 
   if (!isOpen || !order) return null;
-
-  const handleQtyChange = (medicineId: string, delta: number) => {
-    setItems((prev) =>
-      prev.map((item) => {
-        if (item.medicineId === medicineId) {
-          const newQty = Math.max(1, item.quantity + delta);
-          return { ...item, quantity: newQty };
-        }
-        return item;
-      })
-    );
-  };
-
-  const handleRemoveItem = (medicineId: string) => {
-    setItems((prev) => prev.filter((item) => item.medicineId !== medicineId));
-  };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,20 +65,8 @@ export default function EditOrderDialog({
       return;
     }
 
-    if (patientMobile.length !== 10) {
+    if (patientMobile && patientMobile.length !== 10) {
       setErrorMsg("Patient mobile must be exactly 10 digits.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (!patientAddress.trim()) {
-      setErrorMsg("Patient address is required.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (items.length === 0) {
-      setErrorMsg("Order must contain at least one medicine item.");
       setIsSubmitting(false);
       return;
     }
@@ -119,10 +79,7 @@ export default function EditOrderDialog({
           mobile: patientMobile,
           address: patientAddress,
         },
-        items: items.map((i) => ({
-          medicineId: i.medicineId,
-          quantity: i.quantity,
-        })),
+        medicines: medicinesText,
       });
       onClose();
     } catch (err: any) {
@@ -196,7 +153,7 @@ export default function EditOrderDialog({
           {/* Patient Mobile */}
           <div className="space-y-1.5">
             <label className="font-label-md text-label-md text-on-surface-variant ml-1" htmlFor="patientMobile">
-              Patient Mobile *
+              Patient Mobile
             </label>
             <input
               id="patientMobile"
@@ -205,14 +162,13 @@ export default function EditOrderDialog({
               className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all font-body-md text-body-md placeholder:text-outline/60 text-on-surface"
               placeholder="10-digit mobile number"
               type="tel"
-              required
             />
           </div>
 
           {/* Patient Address */}
           <div className="space-y-1.5">
             <label className="font-label-md text-label-md text-on-surface-variant ml-1" htmlFor="patientAddress">
-              Patient Address *
+              Patient Address
             </label>
             <textarea
               id="patientAddress"
@@ -220,56 +176,21 @@ export default function EditOrderDialog({
               onChange={(e) => setPatientAddress(e.target.value)}
               className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all font-body-md text-body-md placeholder:text-outline/60 text-on-surface min-h-[60px]"
               placeholder="Delivery address details"
-              required
             />
           </div>
 
-          {/* Ordered Items List */}
-          <div className="space-y-2 pt-2">
-            <span className="font-label-md text-label-md text-on-surface-variant ml-1 block">
-              Medicines in Order *
-            </span>
-            <div className="space-y-2 bg-surface-container-low p-3 rounded-xl border border-outline-variant">
-              {items.map((item) => (
-                <div key={item.medicineId} className="flex items-center justify-between gap-2 py-1.5 first:pt-0 last:pb-0 border-b last:border-b-0 border-outline-variant">
-                  <span className="font-body-md text-body-md text-on-surface font-semibold truncate flex-1">
-                    {item.name}
-                  </span>
-                  
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center border border-outline rounded-lg bg-surface overflow-hidden h-8">
-                      <button
-                        type="button"
-                        onClick={() => handleQtyChange(item.medicineId, -1)}
-                        disabled={item.quantity <= 1}
-                        className="px-2 h-full text-on-surface hover:bg-surface-container active:bg-surface-container-high transition-colors disabled:opacity-40"
-                      >
-                        -
-                      </button>
-                      <span className="px-2.5 text-xs font-bold text-primary font-mono min-w-[20px] text-center">
-                        {item.quantity}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleQtyChange(item.medicineId, 1)}
-                        className="px-2 h-full text-on-surface hover:bg-surface-container active:bg-surface-container-high transition-colors"
-                      >
-                        +
-                      </button>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveItem(item.medicineId)}
-                      className="p-1 rounded text-error hover:bg-error/10 transition-colors"
-                      title="Remove medicine"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">delete</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+          {/* Medicines Summary */}
+          <div className="space-y-1.5">
+            <label className="font-label-md text-label-md text-on-surface-variant ml-1" htmlFor="medicinesText">
+              Prescription Medicines
+            </label>
+            <textarea
+              id="medicinesText"
+              value={medicinesText}
+              onChange={(e) => setMedicinesText(e.target.value)}
+              className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all font-body-md text-body-md placeholder:text-outline/60 text-on-surface min-h-[60px]"
+              placeholder="e.g. MOXICIP EYE 5ML x1"
+            />
           </div>
 
           {/* Actions Footer */}

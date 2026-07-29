@@ -7,10 +7,8 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   const navItems = [
-    { name: "Medicines", href: "/dashboard/catalog", icon: "verified_user" },
-    { name: "OCR", href: "/dashboard/ocr", icon: "document_scanner" },
     { name: "Orders", href: "/dashboard/otp", icon: "local_shipping" },
-    { name: "Inventry", href: "/dashboard", icon: "inventory_2" },
+    { name: "OCR", href: "/dashboard/ocr", icon: "document_scanner" },
     { name: "Profile", href: "/profile", icon: "person" },
   ];
 

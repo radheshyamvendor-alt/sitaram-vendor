@@ -62,75 +62,53 @@ export default function Header({ title, icon, rightActions }: HeaderProps) {
   const displayIcon = icon ?? defaultIcon;
 
   const links = [
-    { name: "Medicines", href: "/dashboard/catalog" },
-    { name: "Scan Prescription", href: "/dashboard/ocr" },
     { name: "Orders", href: "/dashboard/otp" },
-    { name: "Inventry", href: "/dashboard", displayName: "Inventory" },
+    { name: "Scan Prescription", href: "/dashboard/ocr" },
     { name: "Profile", href: "/profile" },
-    { name: "Notifications", href: "/dashboard/notifications" },
   ];
 
   return (
     <>
       {/* ── DESKTOP HEADER ── */}
       <header className="hidden md:block w-full bg-white border-b border-[#e0e3e5] sticky top-0 z-50 shadow-sm transition-all duration-300">
-        <div className="max-w-[1440px] xl:max-w-[1600px] 2xl:max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-8 h-20 xl:h-16 flex justify-between items-center transition-all duration-300">
-          {/* Brand Name / Logo on Left */}
-          <div className="flex items-center gap-6 xl:gap-8">
-            <Link href="/dashboard" className="flex items-center hover:opacity-90 transition-opacity gap-2">
-              <span className="text-xl sm:text-2xl font-bold text-[#003d9b] xl:hidden">
-                Sitaram Medical
-              </span>
-              <div className="hidden xl:flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#003d9b] to-[#0052cc] flex items-center justify-center text-white shadow-sm shrink-0">
-                  <span className="material-symbols-outlined text-[18px] font-bold" style={{ fontVariationSettings: "'FILL' 1" }}>pulse</span>
-                </div>
-                <span className="text-lg font-black text-[#003d9b] tracking-tight">SM</span>
-              </div>
-            </Link>
-            {/* Navigation Links - Desktop */}
-            <nav className="flex items-center gap-2 xl:gap-3">
-              {links.map((link) => {
-                const isActive = pathname === link.href;
-                return (
-                  <Link
-                    key={link.name}
-                    href={link.href}
-                    className={`text-sm font-semibold transition-all pb-1 xl:pb-0 xl:px-3 xl:py-1.5 xl:rounded-lg hover:text-[#003d9b] ${
-                      isActive
-                        ? "text-[#003d9b] border-b-2 border-[#003d9b] xl:border-b-0 xl:bg-[#003d9b]/5 xl:text-[#003d9b] font-bold"
-                        : "text-[#505f76] xl:hover:bg-[#eceef0]/50"
-                    }`}
-                  >
-                    {link.displayName || link.name}
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
+        <div className="max-w-[1440px] xl:max-w-[1600px] 2xl:max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-8 h-16 relative flex justify-between items-center">
+          {/* Brand Name on Left (No Logo Icon) */}
+          <Link href="/dashboard/otp" className="flex items-center hover:opacity-90 transition-opacity">
+            <span className="text-xl font-bold text-[#003d9b] tracking-tight">
+              Sitaram Medical
+            </span>
+          </Link>
+
+          {/* Navigation Links - Centered in Middle */}
+          <nav className="absolute left-1/2 -translate-x-1/2 flex items-center gap-8 sm:gap-10">
+            {links.map((link) => {
+              const isActive =
+                link.href === "/dashboard/otp"
+                  ? pathname.startsWith("/dashboard/otp") || pathname === "/dashboard"
+                  : pathname.startsWith(link.href);
+
+              return (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  className={`text-sm font-semibold transition-colors relative py-1 hover:text-[#003d9b] ${
+                    isActive
+                      ? "text-[#003d9b] font-bold"
+                      : "text-[#505f76]"
+                  }`}
+                >
+                  {link.name}
+                  {isActive && (
+                    <span className="absolute bottom-0 left-0 w-full h-[2px] bg-[#003d9b] rounded-full" />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
 
           {/* User profile / Logout on Right */}
           <div className="flex items-center gap-4">
-            {/* Old layout for md/lg, hidden on xl */}
-            <div className="flex xl:hidden items-center gap-4">
-              <button
-                onClick={logout}
-                className="text-sm font-semibold text-[#505f76] hover:text-[#ba1a1a] transition-colors"
-              >
-                Logout
-              </button>
-              <div className="w-10 h-10 rounded-full bg-surface-container-highest overflow-hidden border border-[#e0e3e5] shrink-0">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  alt="User Avatar"
-                  className="w-full h-full object-cover"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8DDlvrxN56DhF-qAbAW49-l1xusXm4nU0pdNonwGYZJ5XE97jF2-h1-CIu5lqxQRe4_l_1C9v8gpdU2UHA4B9pUiFcZ_8EkVK5rH-JQlDXvDyJc3XAb5YYm-K_B5cXypPVBNdez3Mm8Eii1Iocaj39DhKO8q2uDFva2VFjDDBLk8MI4oW367fb0ujikN0DxZJQqs0buCuPl3oVMDL-u5GPciNVlsEY6DtmneJ9hcVSThwQuosj7WkEYmN0onNVD-DBwKf0cH1Q0k"
-                />
-              </div>
-            </div>
-
-            {/* New premium dropdown on xl */}
-            <div className="hidden xl:block relative" ref={dropdownRef}>
+            <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#e0e3e5] hover:bg-[#eceef0]/50 transition-all font-semibold text-sm text-[#505f76] hover:text-[#003d9b]"
@@ -139,7 +117,12 @@ export default function Header({ title, icon, rightActions }: HeaderProps) {
                   {user?.name?.slice(0, 2).toUpperCase() || "RC"}
                 </div>
                 <span>{user?.name || "Chemist"}</span>
-                <span className="material-symbols-outlined text-[16px] transition-transform duration-200" style={{ transform: isDropdownOpen ? "rotate(180deg)" : "none" }}>keyboard_arrow_down</span>
+                <span
+                  className="material-symbols-outlined text-[16px] transition-transform duration-200"
+                  style={{ transform: isDropdownOpen ? "rotate(180deg)" : "none" }}
+                >
+                  keyboard_arrow_down
+                </span>
               </button>
 
               {isDropdownOpen && (
@@ -157,14 +140,6 @@ export default function Header({ title, icon, rightActions }: HeaderProps) {
                     >
                       <span className="material-symbols-outlined text-[18px]">person</span>
                       <span>Profile</span>
-                    </Link>
-                    <Link
-                      href="/dashboard/notifications"
-                      onClick={() => setIsDropdownOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-[#505f76] hover:bg-[#eceef0]/50 hover:text-[#003d9b] transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">notifications</span>
-                      <span>Notifications</span>
                     </Link>
                   </div>
                   <div className="border-t border-[#e0e3e5] pt-1">
@@ -201,10 +176,10 @@ export default function Header({ title, icon, rightActions }: HeaderProps) {
         {rightActions || (
           <div className="flex items-center gap-2">
             <Link
-              href="/dashboard/notifications"
+              href="/profile"
               className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors text-on-surface-variant"
             >
-              <span className="material-symbols-outlined">notifications</span>
+              <span className="material-symbols-outlined">person</span>
             </Link>
           </div>
         )}
@@ -212,3 +187,4 @@ export default function Header({ title, icon, rightActions }: HeaderProps) {
     </>
   );
 }
+

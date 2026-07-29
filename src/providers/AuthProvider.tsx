@@ -15,6 +15,7 @@ import {
 import { authService } from "@/services/auth.service";
 
 interface User {
+  id?: string;
   name: string;
   email: string;
   mobile: string;
@@ -201,7 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Schedule automated background silent refresh
         scheduleNextRefresh(expiration);
 
-        router.push("/dashboard/catalog");
+        router.push("/dashboard/otp");
       } else {
         throw new Error(response.message || "Login failed");
       }

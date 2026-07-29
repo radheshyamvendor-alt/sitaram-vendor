@@ -282,39 +282,19 @@ export async function POST(req: NextRequest) {
     const ocrPatient = ocrResult.patient || {};
     const ocrMedicines: any[] = ocrResult.medicines || [];
 
-    // Match OCR medicine names against our local database
-    const allDbMedicines = await prisma.medicine.findMany();
     const verifiedMedicines: any[] = [];
 
     for (const ocrMed of ocrMedicines) {
       const ocrName: string = (ocrMed.name || "").trim();
       if (ocrName.length < 2) continue;
 
-      // Fuzzy match by name against our DB
-      let bestMatch: typeof allDbMedicines[0] | null = null;
-      let highestScore = 0;
-
-      for (const dbMed of allDbMedicines) {
-        const score = calculateSimilarity(ocrName, dbMed.name);
-        if (score > highestScore) {
-          highestScore = score;
-          bestMatch = dbMed;
-        }
-      }
-
-      // Only use match if similarity >= 75%
-      if (highestScore < 0.75) bestMatch = null;
-
-      // Prevent duplicates
-      const alreadyAdded = verifiedMedicines.some(
-        (item) => (bestMatch ? item.id === bestMatch!.id : item.name === ocrName)
-      );
+      const alreadyAdded = verifiedMedicines.some((item) => item.name === ocrName);
       if (!alreadyAdded) {
         verifiedMedicines.push({
-          id: bestMatch?.id ?? null,
-          name: bestMatch?.name ?? ocrName,
-          price: bestMatch?.price ?? null,
-          stock: bestMatch?.stock ?? null,
+          id: null,
+          name: ocrName,
+          price: null,
+          stock: null,
           quantity: ocrMed.quantity || 1,
           confidence: ocrMed.confidence ?? 1,
         });

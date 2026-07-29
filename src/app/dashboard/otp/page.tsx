@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import useAuth from "@/hooks/useAuth";
-import { getDashboardStats, startDelivery, getOrders, deleteOrder, updateOrder } from "@/app/actions/order";
+import { getChemistIdFromToken } from "@/lib/jwt";
+import { getDashboardOverview, startDelivery, deleteOrder, updateOrder } from "@/app/actions/order";
 import OTPModal from "@/components/dashboard/OTPModal";
 import EditOrderDialog from "@/components/dashboard/EditOrderDialog";
 import ConfirmationDialog from "@/components/dashboard/ConfirmationDialog";
@@ -13,22 +14,33 @@ import BottomNav from "@/components/dashboard/BottomNav";
 
 export interface DashboardOrder {
   id: string;
+  patientId?: string | null;
   prescriptionNumber: string | null;
+  patientName?: string | null;
+  patientMobile?: string | null;
+  patientAddress?: string | null;
+  medicines?: string | null;
   status: string;
   otp: string | null;
   createdAt: string | Date;
-  patient: {
+  patient?: {
     name: string;
     mobile: string;
     address: string;
   } | null;
-  orderMedicines: Array<{
-    medicineId: string;
-    quantity: number;
-    medicine: {
-      name: string;
-    };
-  }>;
+}
+
+export function formatMedicinesDisplay(medicinesStr?: string | null): string {
+  if (!medicinesStr) return "Prescription Medicines";
+  try {
+    const parsed = JSON.parse(medicinesStr);
+    if (Array.isArray(parsed)) {
+      return parsed.map((m: any) => `${m.name} (x${m.quantity || 1})`).join(", ");
+    }
+  } catch {
+    // If raw text
+  }
+  return medicinesStr;
 }
 
 export default function OTPVerificationPage() {
@@ -69,18 +81,13 @@ export default function OTPVerificationPage() {
     setPage(1);
   }, [debouncedSearch]);
 
-  // Fetch Dashboard Stats
-  const { data, isLoading: isStatsLoading, error: statsError } = useQuery({
-    queryKey: ["dashboard-stats", user?.email],
-    queryFn: () => getDashboardStats(user?.email),
-    enabled: user !== null,
-  });
+  // Single Unified Query for Dashboard Overview (Stats + Paginated Orders)
+  const tokenInfo = getChemistIdFromToken();
+  const activeChemistId = tokenInfo.chemistId || undefined;
 
-  // Fetch paginated orders (server-side pagination of 10 items)
-  const { data: ordersResult, isLoading: isOrdersLoading, error: ordersError } = useQuery({
-    queryKey: ["orders", page, user?.email, debouncedSearch],
-    queryFn: () => getOrders(page, pageSize, user?.email, debouncedSearch),
-    enabled: user !== null,
+  const { data: dashboardResult, isLoading, error } = useQuery({
+    queryKey: ["dashboard-overview", page, user?.email, debouncedSearch, activeChemistId],
+    queryFn: () => getDashboardOverview(page, pageSize, user?.email, debouncedSearch, activeChemistId),
   });
 
   // Start Delivery mutation
@@ -88,8 +95,7 @@ export default function OTPVerificationPage() {
     mutationFn: (orderId: string) => startDelivery(orderId),
     onSuccess: (result, orderId) => {
       if (result.success && result.data) {
-        queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
-        queryClient.invalidateQueries({ queryKey: ["orders"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard-overview"] });
         
         // Open OTP Verification Dialog directly
         setOtpOrderId(orderId);
@@ -104,8 +110,7 @@ export default function OTPVerificationPage() {
     mutationFn: (orderId: string) => deleteOrder(orderId),
     onSuccess: (result) => {
       if (result.success) {
-        queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
-        queryClient.invalidateQueries({ queryKey: ["orders"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard-overview"] });
       } else {
         alert(result.error || "Failed to delete order");
       }
@@ -117,24 +122,23 @@ export default function OTPVerificationPage() {
     mutationFn: ({ orderId, input }: { orderId: string; input: any }) => updateOrder(orderId, input),
     onSuccess: (result) => {
       if (result.success) {
-        queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
-        queryClient.invalidateQueries({ queryKey: ["orders"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard-overview"] });
       } else {
         alert(result.error || "Failed to update order");
       }
     },
   });
 
-  const stats = (data && data.success && data.stats) ? data.stats : {
+  const stats = (dashboardResult && dashboardResult.success && dashboardResult.stats) ? dashboardResult.stats : {
     totalMedicines: 0,
     ordersToday: 0,
     pendingDeliveries: 0,
     completedDeliveries: 0,
   };
 
-  const recentOrders = (ordersResult?.success ? (ordersResult.data ?? []) : []) as DashboardOrder[];
-  const totalPages = ordersResult?.success ? (ordersResult.pagination?.totalPages ?? 1) : 1;
-  const totalCount = ordersResult?.success ? (ordersResult.pagination?.totalCount ?? 0) : 0;
+  const recentOrders = (dashboardResult?.success ? (dashboardResult.orders ?? []) : []) as DashboardOrder[];
+  const totalPages = dashboardResult?.success ? (dashboardResult.pagination?.totalPages ?? 1) : 1;
+  const totalCount = dashboardResult?.success ? (dashboardResult.pagination?.totalCount ?? 0) : 0;
 
   const handleStartDelivery = (order: DashboardOrder) => {
     startDeliveryMutation.mutate(order.id);
@@ -158,9 +162,6 @@ export default function OTPVerificationPage() {
     }
   };
 
-  const isLoading = isStatsLoading || isOrdersLoading;
-  const error = statsError || ordersError;
-
   return (
     <div className="min-h-screen bg-background text-on-surface">
       {/* Unified Navigation Header */}
@@ -175,28 +176,23 @@ export default function OTPVerificationPage() {
               Welcome back, {user?.name || "Chemist"}!
             </h2>
             <p className="text-sm text-on-surface-variant">
-              Manage medicine inventories, process prescription uploads, and verify package deliveries securely.
+              Scan prescriptions, track customer orders, and verify package deliveries securely.
             </p>
           </div>
           
           <div className="flex gap-2">
             <Link
-              href="/dashboard/catalog"
-              className="px-4 py-2.5 bg-[#003d9b] text-white rounded-xl font-label-md text-label-md hover:opacity-95 transition-all shadow"
+              href="/dashboard/ocr"
+              className="px-4 py-2.5 bg-[#003d9b] text-white rounded-xl font-label-md text-label-md hover:opacity-95 transition-all shadow flex items-center gap-2"
             >
-              Browse Catalog
-            </Link>
-            <Link
-              href="/dashboard"
-              className="px-4 py-2.5 border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container rounded-xl font-label-md text-label-md transition-all"
-            >
-              Inventory
+              <span className="material-symbols-outlined text-[18px]">document_scanner</span>
+              <span>Scan Prescription</span>
             </Link>
           </div>
         </div>
 
         {/* Loading Spinner */}
-        {isStatsLoading && !data ? (
+        {isLoading && !dashboardResult ? (
           <div className="p-12 flex flex-col items-center justify-center bg-surface-container-lowest border border-outline-variant rounded-xl glass-card">
             <svg className="animate-spin h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -204,24 +200,14 @@ export default function OTPVerificationPage() {
             </svg>
             <span className="mt-4 text-on-surface-variant text-sm font-semibold">Updating statistics counts...</span>
           </div>
-        ) : statsError && !data ? (
+        ) : error && !dashboardResult ? (
           <div className="p-6 text-center text-error font-medium bg-surface-container-lowest border border-outline-variant rounded-xl glass-card">
-            Failed to sync dashboard statistics: {(statsError as Error).message || "Unknown error"}
+            Failed to sync dashboard statistics: {(error as Error).message || "Unknown error"}
           </div>
         ) : (
           <>
             {/* Stat Cards Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {/* Total Medicines */}
-              <div className="bg-surface-container-lowest border border-outline-variant shadow-sm rounded-xl p-5 glass-card">
-                <span className="text-[10px] uppercase font-bold text-outline tracking-wider block">
-                  Total Medicines
-                </span>
-                <span className="text-display-lg text-[32px] font-bold text-[#003d9b] block mt-1">
-                  {stats.totalMedicines}
-                </span>
-              </div>
-
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               {/* Orders Today */}
               <div className="bg-surface-container-lowest border border-outline-variant shadow-sm rounded-xl p-5 glass-card">
                 <span className="text-[10px] uppercase font-bold text-outline tracking-wider block">
@@ -269,7 +255,7 @@ export default function OTPVerificationPage() {
                 </div>
               </div>
 
-              <div className={`transition-opacity duration-200 ${isOrdersLoading ? "opacity-60" : "opacity-100"}`}>
+              <div className={`transition-opacity duration-200 ${isLoading ? "opacity-60" : "opacity-100"}`}>
                 {recentOrders.length === 0 ? (
                   <div className="p-12 text-center text-on-surface-variant font-medium">
                     {searchInput ? "No orders found matching your search." : "No orders placed yet. Head over to the Medicine Catalog to create one!"}
@@ -279,50 +265,62 @@ export default function OTPVerificationPage() {
                   {/* Table View — shown on Medium screens and up */}
                   <div className="hidden md:block overflow-x-auto">
                     <table className="w-full border-collapse text-left text-sm text-on-surface">
-                      <thead className="bg-surface-container-lowest text-xs uppercase text-on-surface-variant font-bold border-b border-outline-variant select-none">
+                      <thead className="bg-surface-container border-b border-outline-variant">
                         <tr>
-                          <th className="px-6 py-4">Prescription No</th>
-                          <th className="px-6 py-4">Patient Details</th>
-                          <th className="px-6 py-4">Ordered Medicines</th>
-                          <th className="px-6 py-4">Order Date</th>
-                          <th className="px-6 py-4 text-center">Status</th>
-                          <th className="px-6 py-4 text-right">Delivery Action</th>
+                          <th className="px-6 py-3.5 font-label-md text-label-md text-outline uppercase tracking-wider">
+                            Prescription No
+                          </th>
+                          <th className="px-6 py-3.5 font-label-md text-label-md text-outline uppercase tracking-wider">
+                            Patient Details
+                          </th>
+                          <th className="px-6 py-3.5 font-label-md text-label-md text-outline uppercase tracking-wider">
+                            Ordered Medicines
+                          </th>
+                          <th className="px-6 py-3.5 font-label-md text-label-md text-outline uppercase tracking-wider">
+                            Order Date
+                          </th>
+                          <th className="px-6 py-3.5 font-label-md text-label-md text-outline uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th className="px-6 py-3.5 font-label-md text-label-md text-outline uppercase tracking-wider text-right">
+                            Delivery Action
+                          </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-outline-variant">
-                        {recentOrders.map((order: DashboardOrder) => {
-                          const dateFormatted = new Date(order.createdAt).toLocaleDateString("en-IN", {
-                            day: "numeric",
-                            month: "short",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          });
+                      <tbody className="divide-y divide-outline-variant bg-surface-container-lowest">
+                        {recentOrders.map((order) => {
+                          const dateFormatted = order.createdAt
+                            ? new Date(order.createdAt).toLocaleDateString("en-GB", {
+                                day: "2-digit",
+                                month: "short",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "N/A";
 
                           return (
-                            <tr key={order.id} className="hover:bg-surface-container-low transition-colors">
+                            <tr key={order.id} className="hover:bg-surface-container/40 transition-colors group">
                               {/* Prescription Number */}
-                              <td className="px-6 py-4 font-mono font-semibold text-primary">
-                                {order.prescriptionNumber || "No Prescription"}
+                              <td className="px-6 py-4 font-mono font-bold text-xs text-primary">
+                                {order.prescriptionNumber || "N/A"}
                               </td>
                               {/* Patient Info */}
                               <td className="px-6 py-4">
                                 <div>
-                                  <span className="font-semibold block text-on-surface">
-                                    {order.patient?.name || "Anonymous Patient"}
+                                  <span className="font-bold text-on-surface text-sm block">
+                                    {order.patientName || order.patient?.name || "Anonymous Patient"}
                                   </span>
                                   <span className="text-[10px] text-on-surface-variant block">
-                                    {order.patient?.mobile}
+                                    {order.patientMobile || order.patient?.mobile || "N/A"}
                                   </span>
                                 </div>
                               </td>
                               {/* Medicines summary list */}
                               <td className="px-6 py-4">
-                                <div className="max-w-[200px] truncate" title={order.orderMedicines.map((m) => `${m.medicine.name} (x${m.quantity})`).join(", ")}>
-                                  {order.orderMedicines.map((m) => (
-                                    <span key={m.medicineId} className="block text-xs">
-                                      • {m.medicine.name} <span className="font-bold text-[#003d9b]">x{m.quantity}</span>
-                                    </span>
-                                  ))}
+                                <div className="max-w-[220px] truncate" title={formatMedicinesDisplay(order.medicines)}>
+                                  <span className="block text-xs text-on-surface font-medium">
+                                    {formatMedicinesDisplay(order.medicines)}
+                                  </span>
                                 </div>
                               </td>
                               {/* Date */}
@@ -448,7 +446,7 @@ export default function OTPVerificationPage() {
                                 Patient Name
                               </span>
                               <span className="font-semibold text-on-surface text-sm">
-                                {order.patient?.name || "Anonymous Patient"}
+                                {order.patientName || order.patient?.name || "Anonymous Patient"}
                               </span>
                             </div>
                             <div>
@@ -456,7 +454,7 @@ export default function OTPVerificationPage() {
                                 Mobile Number
                               </span>
                               <span className="font-semibold text-on-surface text-sm">
-                                {order.patient?.mobile || "N/A"}
+                                {order.patientMobile || order.patient?.mobile || "N/A"}
                               </span>
                             </div>
                           </div>
@@ -465,13 +463,9 @@ export default function OTPVerificationPage() {
                             <span className="text-[10px] font-bold text-outline uppercase tracking-wider block mb-1">
                               Ordered Medicines
                             </span>
-                            <div className="space-y-1 bg-surface-container rounded-lg p-2.5 border border-outline-variant">
-                              {order.orderMedicines.map((m) => (
-                                <span key={m.medicineId} className="block text-xs text-on-surface">
-                                  • {m.medicine.name} <span className="font-bold text-[#003d9b]">x{m.quantity}</span>
-                                </span>
-                              ))}
-                            </div>
+                              <span className="block text-xs text-on-surface font-medium">
+                                {formatMedicinesDisplay(order.medicines)}
+                              </span>
                           </div>
 
                           <div className="flex justify-between items-center pt-2">

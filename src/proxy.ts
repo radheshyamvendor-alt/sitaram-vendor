@@ -26,9 +26,9 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // If already authenticated and trying to access login/register, redirect to dashboard
+  // If already authenticated and trying to access login/register, redirect to dashboard orders
   if (isAuthRoute && refreshToken) {
-    const dashboardUrl = new URL("/dashboard/catalog", request.url);
+    const dashboardUrl = new URL("/dashboard/otp", request.url);
     return NextResponse.redirect(dashboardUrl);
   }
 

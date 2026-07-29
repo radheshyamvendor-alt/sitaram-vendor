@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { useCart } from "@/providers/CartProvider";
+import { useRouter } from "next/navigation";
+import useAuth from "@/hooks/useAuth";
+import { tokenStorage } from "@/lib/tokenStorage";
+import { getChemistIdFromToken } from "@/lib/jwt";
+import { createDirectOrder } from "@/app/actions/order";
 import Header from "@/components/dashboard/Header";
 import BottomNav from "@/components/dashboard/BottomNav";
 
@@ -29,15 +32,16 @@ interface OcrResult {
 }
 
 export default function OcrPage() {
-  const { addMultipleToCart } = useCart();
+  const { user, logout } = useAuth();
+  const router = useRouter();
+
   const [isOcrProcessing, setIsOcrProcessing] = useState(false);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  // Pending result awaiting user confirmation
+  // Pending result awaiting user review
   const [pendingResult, setPendingResult] = useState<OcrResult | null>(null);
-  // Confirmed / added to cart flag
-  const [addedToCart, setAddedToCart] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
   const handleUpdateMedQty = (medName: string, newQty: number) => {
@@ -89,7 +93,6 @@ export default function OcrPage() {
     setIsOcrProcessing(true);
     setOcrError(null);
     setPendingResult(null);
-    setAddedToCart(false);
     setIsEditing(false);
 
     const formData = new FormData();
@@ -103,7 +106,6 @@ export default function OcrPage() {
 
       const resData = await response.json();
       if (resData.success) {
-        // Show extracted details for review — do NOT add to cart yet
         setPendingResult(resData.data);
       } else {
         setOcrError(resData.error || "OCR extraction failed. Please try again.");
@@ -117,10 +119,25 @@ export default function OcrPage() {
     }
   };
 
-  const handleConfirmAndAdd = () => {
+  const handleSubmitOrder = async () => {
     if (!pendingResult) return;
 
-    // Validate phone number only if it was extracted (mobile may be null)
+    // Verify active JWT session token and extract active chemistId from token payload
+    const tokenInfo = getChemistIdFromToken();
+    if (tokenInfo.isExpired || !tokenInfo.chemistId) {
+      setOcrError(tokenInfo.error || "Session expired. Please login again.");
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      setTimeout(() => {
+        logout();
+      }, 1500);
+      return;
+    }
+
+    const activeChemistId = tokenInfo.chemistId;
+
+    // Mobile number validation if present
     if (pendingResult.patient.mobile != null) {
       const mobileDigits = String(pendingResult.patient.mobile).replace(/\D/g, "");
       if (mobileDigits.length !== 10) {
@@ -133,38 +150,43 @@ export default function OcrPage() {
       pendingResult.patient.mobile = mobileDigits;
     }
 
-    // Save prescription details to localStorage
-    if (typeof window !== "undefined") {
-      localStorage.setItem(
-        "radheshyam_scanned_rx",
-        JSON.stringify({
-          prescriptionNumber: pendingResult.prescriptionNumber,
-          patient: pendingResult.patient,
-        })
-      );
+    setIsSubmittingOrder(true);
+    setOcrError(null);
+
+    // Build structured JSON string storing medicine name and quantity
+    const medicinesJson = JSON.stringify(
+      pendingResult.medicines.map((m) => ({ name: m.name, quantity: m.quantity }))
+    );
+
+    try {
+      const result = await createDirectOrder({
+        prescriptionNumber: pendingResult.prescriptionNumber,
+        patientName: pendingResult.patient.name || "Anonymous Patient",
+        patientMobile: pendingResult.patient.mobile || undefined,
+        patientAddress: pendingResult.patient.address || undefined,
+        patientGender: pendingResult.patient.gender || undefined,
+        patientAge: pendingResult.patient.age || undefined,
+        medicines: medicinesJson,
+        chemistId: activeChemistId,
+        chemistEmail: user?.email || tokenStorage.getUserData()?.email || undefined,
+      });
+
+      if (result.success) {
+        // Redirect directly to Orders page
+        router.push("/dashboard/otp");
+      } else {
+        setOcrError(result.error || "Failed to submit order. Please try again.");
+      }
+    } catch (err) {
+      console.error(err);
+      setOcrError(err instanceof Error ? err.message : "Error submitting order.");
+    } finally {
+      setIsSubmittingOrder(false);
     }
-
-    // Only add medicines that exist in our DB (id != null)
-    const cartableMedicines = pendingResult.medicines
-      .filter((m): m is ExtractedMedicine & { id: string } => m.id !== null)
-      .map((m) => ({
-        id: m.id,
-        name: m.name,
-        price: m.price ?? 0,
-        stock: m.stock ?? 0,
-        quantity: m.quantity,
-      }));
-
-    if (cartableMedicines.length > 0) {
-      addMultipleToCart(cartableMedicines);
-    }
-
-    setAddedToCart(true);
   };
 
   const resetScanner = () => {
     setPendingResult(null);
-    setAddedToCart(false);
     setOcrError(null);
     setIsEditing(false);
   };
@@ -183,18 +205,17 @@ export default function OcrPage() {
             </div>
           )}
 
-          {/* STEP 1: Upload area — shown when no result pending */}
-          {!pendingResult && !addedToCart && (
+          {/* STEP 1: Upload area */}
+          {!pendingResult && (
             <div className="bg-surface border border-outline-variant shadow-sm rounded-xl p-8 glass-card space-y-6">
               <div className="text-center space-y-2">
                 <h3 className="text-headline-sm font-bold text-on-surface">Prescription OCR Scanner</h3>
                 <p className="text-sm text-on-surface-variant max-w-sm mx-auto">
-                  Upload a prescription document (PDF or image). Our OCR engine will extract the details for you to review before adding to cart.
+                  Upload a prescription document (PDF or image). Extracted details will create an order directly.
                 </p>
               </div>
 
               {isOcrProcessing ? (
-                /* Scanning Animation */
                 <div className="h-64 border border-outline-variant rounded-2xl bg-surface-container-lowest flex flex-col items-center justify-center relative overflow-hidden">
                   <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-85 shadow-[0_0_10px_#003d9b] animate-[bounce_2.5s_infinite_linear]"></div>
                   <svg className="animate-spin h-10 w-10 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -205,7 +226,6 @@ export default function OcrPage() {
                   <p className="text-xs text-on-surface-variant mt-1 animate-pulse">Extracting credentials &amp; matching medicines...</p>
                 </div>
               ) : (
-                /* File Drop Area */
                 <div
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
@@ -240,15 +260,15 @@ export default function OcrPage() {
             </div>
           )}
 
-          {/* STEP 2: Review extracted details before confirming */}
-          {pendingResult && !addedToCart && (
+          {/* STEP 2: Review extracted details & Create Order */}
+          {pendingResult && (
             <div className="bg-surface border border-outline-variant shadow-sm rounded-xl p-6 glass-card space-y-5">
               {/* Review header */}
               <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 text-amber-700 rounded-xl">
                 <span className="material-symbols-outlined text-[22px]">rate_review</span>
                 <div>
                   <h4 className="font-bold text-sm">Review Extracted Details</h4>
-                  <p className="text-xs text-on-surface-variant mt-0.5">Please verify the details below before adding medicines to your cart.</p>
+                  <p className="text-xs text-on-surface-variant mt-0.5">Verify the details below before submitting the order.</p>
                 </div>
               </div>
 
@@ -322,7 +342,7 @@ export default function OcrPage() {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-xs text-outline block">Patient Name</span>
-                      <span className="font-semibold text-on-surface">{pendingResult.patient.name}</span>
+                      <span className="font-semibold text-on-surface">{pendingResult.patient.name || "N/A"}</span>
                     </div>
                     <div>
                       <span className="text-xs text-outline block">Rx Number</span>
@@ -330,11 +350,11 @@ export default function OcrPage() {
                     </div>
                     <div>
                       <span className="text-xs text-outline block">Mobile Number</span>
-                      <span className="font-semibold text-on-surface">{pendingResult.patient.mobile}</span>
+                      <span className="font-semibold text-on-surface">{pendingResult.patient.mobile || "N/A"}</span>
                     </div>
                     <div className="col-span-2">
                       <span className="text-xs text-outline block">Residential Address</span>
-                      <span className="font-semibold text-on-surface">{pendingResult.patient.address}</span>
+                      <span className="font-semibold text-on-surface">{pendingResult.patient.address || "N/A"}</span>
                     </div>
                   </div>
                 )}
@@ -346,18 +366,16 @@ export default function OcrPage() {
                 <div className="divide-y divide-outline-variant">
                   {pendingResult.medicines.length === 0 ? (
                     <div className="py-4 text-center text-sm text-on-surface-variant font-medium">
-                      No medicines. Please scan again or add manually.
+                      No medicines detected.
                     </div>
                   ) : (
                     pendingResult.medicines.map((med) => (
-                      <div key={med.id || med.name} className="py-3 flex justify-between items-center text-sm gap-2">
+                      <div key={med.name} className="py-3 flex justify-between items-center text-sm gap-2">
                         <div className="flex-grow">
                           <span className="font-semibold text-on-surface">{med.name}</span>
-                          <span className="block text-xs text-on-surface-variant mt-0.5">{med.price != null ? `₹${med.price.toFixed(2)} each` : "Price N/A (not in inventory)"}</span>
                         </div>
                         {isEditing ? (
                           <div className="flex items-center gap-3">
-                            {/* Quantity Editor */}
                             <div className="flex items-center border border-outline-variant rounded-lg overflow-hidden bg-surface">
                               <button
                                 type="button"
@@ -377,7 +395,6 @@ export default function OcrPage() {
                                 <span className="material-symbols-outlined text-[16px]">add</span>
                               </button>
                             </div>
-                            {/* Remove button */}
                             <button
                               type="button"
                               onClick={() => handleRemoveMed(med.name)}
@@ -390,7 +407,6 @@ export default function OcrPage() {
                         ) : (
                           <div className="text-right">
                             <span className="font-bold text-primary">Qty: {med.quantity}</span>
-                             <span className="block text-xs font-semibold text-outline mt-0.5">{med.price != null ? `Total: ₹${(med.price * med.quantity).toFixed(2)}` : "Total: N/A"}</span>
                           </div>
                         )}
                       </div>
@@ -399,55 +415,35 @@ export default function OcrPage() {
                 </div>
               </div>
 
-              {/* Confirm / Reject Actions */}
+              {/* Direct Order Creation Action */}
               <div className="flex flex-col sm:flex-row gap-3 pt-1">
                 <button
-                  onClick={handleConfirmAndAdd}
-                  className="flex-1 bg-primary text-on-primary font-bold py-3.5 rounded-xl hover:bg-on-primary-fixed-variant transition-all text-center flex items-center justify-center gap-2 shadow-md"
+                  onClick={handleSubmitOrder}
+                  disabled={isSubmittingOrder}
+                  className="flex-1 bg-primary text-on-primary font-bold py-3.5 rounded-xl hover:bg-on-primary-fixed-variant transition-all text-center flex items-center justify-center gap-2 shadow-md disabled:opacity-75"
                 >
-                  <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                  <span>Confirm &amp; Add to Cart</span>
+                  {isSubmittingOrder ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Creating Order...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                      <span>Submit &amp; Create Order</span>
+                    </>
+                  )}
                 </button>
                 <button
                   onClick={resetScanner}
+                  disabled={isSubmittingOrder}
                   className="flex-1 bg-surface-container-low border border-outline-variant text-on-surface-variant font-bold py-3.5 rounded-xl hover:bg-error-container/10 hover:border-error/30 hover:text-error transition-all text-center flex items-center justify-center gap-2"
                 >
                   <span className="material-symbols-outlined text-[18px]">cancel</span>
                   <span>Discard &amp; Re-scan</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 3: Added to cart confirmation */}
-          {addedToCart && pendingResult && (
-            <div className="bg-surface border border-outline-variant shadow-sm rounded-xl p-6 glass-card space-y-6">
-              <div className="flex items-center gap-3 p-4 bg-primary-container/10 border border-primary/20 text-primary rounded-xl">
-                <span className="material-symbols-outlined text-[24px]">check_circle</span>
-                <div>
-                  <h4 className="font-bold text-sm">Prescription Details Saved!</h4>
-                  {pendingResult.medicines.filter((m) => m.id != null).length > 0 ? (
-                    <p className="text-xs text-on-surface-variant mt-0.5">Matched medicines have been added to your cart. Proceed to checkout.</p>
-                  ) : (
-                    <p className="text-xs text-on-surface-variant mt-0.5">Patient details saved. No medicines matched your inventory — please add them manually from the Medicines page.</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <Link
-                  href="/dashboard/cart"
-                  className="flex-1 bg-primary text-on-primary font-bold py-3.5 rounded-xl hover:bg-on-primary-fixed-variant transition-all text-center flex items-center justify-center gap-2 shadow-md"
-                >
-                  <span>Go to Cart</span>
-                  <span className="material-symbols-outlined text-[18px]">shopping_cart</span>
-                </Link>
-                <button
-                  onClick={resetScanner}
-                  className="flex-1 bg-surface-container-low border border-outline-variant text-on-surface-variant font-bold py-3.5 rounded-xl hover:bg-surface-container-high transition-all text-center flex items-center justify-center gap-2"
-                >
-                  <span>Scan Another</span>
-                  <span className="material-symbols-outlined text-[18px]">refresh</span>
                 </button>
               </div>
             </div>

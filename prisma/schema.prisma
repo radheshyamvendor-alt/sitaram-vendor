@@ -6,51 +6,19 @@ datasource db {
   provider = "postgresql"
 }
 
-model Medicine {
-  id          String          @id @default(uuid())
-  name        String
-  category    String
-  description String?
-  price       Float
-  stock       Int
-  image       String?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  orderItems  OrderMedicine[]
-}
-
-model Patient {
-  id                 String   @id @default(uuid())
-  prescriptionNumber String   @unique
-  name               String
-  mobile             String
-  address            String
-  gender             String
-  age                Int
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  orders             Order[]
-}
-
 model Order {
-  id                 String          @id @default(uuid())
+  id                 String   @id @default(uuid())
   prescriptionNumber String?
-  patientId          String?
+  patientName        String?
+  patientMobile      String?
+  patientAddress     String?
+  patientGender      String?
+  patientAge         Int?
+  medicines          String?
   status             String
   otp                String?
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  chemistId          String?
   chemistEmail       String?
-  patient            Patient?        @relation(fields: [patientId], references: [id])
-  orderMedicines     OrderMedicine[]
-}
-
-model OrderMedicine {
-  orderId    String
-  medicineId String
-  quantity   Int
-  medicine   Medicine @relation(fields: [medicineId], references: [id])
-  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
-  @@id([orderId, medicineId])
 }

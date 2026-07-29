@@ -38,12 +38,12 @@ export const tokenStorage = {
     localStorage.removeItem(AUTH_CONSTANTS.STORAGE_KEYS.USER_DATA);
   },
 
-  setUserData(data: { name: string; email: string; mobile: string; location: string }): void {
+  setUserData(data: { id?: string; name: string; email: string; mobile: string; location: string }): void {
     if (typeof window === "undefined") return;
     localStorage.setItem(AUTH_CONSTANTS.STORAGE_KEYS.USER_DATA, JSON.stringify(data));
   },
 
-  getUserData(): { name: string; email: string; mobile: string; location: string } | null {
+  getUserData(): { id?: string; name: string; email: string; mobile: string; location: string } | null {
     if (typeof window === "undefined") return null;
     const data = localStorage.getItem(AUTH_CONSTANTS.STORAGE_KEYS.USER_DATA);
     if (!data) return null;
