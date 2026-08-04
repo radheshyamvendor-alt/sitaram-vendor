@@ -6,7 +6,7 @@ import { CartProvider } from "@/providers/CartProvider";
 import SplashOverlay from "@/components/SplashOverlay";
 
 export const metadata: Metadata = {
-  title: "Radheshyam Medical - Authentication Portal",
+  title: "Sitaram Medical - Authentication Portal",
   description: "Secured Access for Medical Professionals & Pharmacies",
 };
 

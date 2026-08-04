@@ -314,7 +314,7 @@ function OcrContent() {
 
                   <div className="mt-5 text-center space-y-1">
                     <span className="px-3 py-1 bg-primary/10 text-primary font-bold text-xs rounded-full inline-block border border-primary/20">
-                      Radheshyam OCR AI Active
+                      Sitaram OCR AI Active
                     </span>
                     <h4 className="font-bold text-on-surface text-base">Scanning Prescription...</h4>
                     <p className="text-xs text-on-surface-variant animate-pulse max-w-xs mx-auto">

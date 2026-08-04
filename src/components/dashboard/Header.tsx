@@ -19,7 +19,7 @@ export default function Header({ title, icon, rightActions }: HeaderProps) {
   const pathname = usePathname();
 
   // Determine dynamic defaults based on pathname
-  let defaultTitle = "Radheshyam Medical";
+  let defaultTitle = "Sitaram Medical";
   let defaultIcon = "medical_services";
 
   if (pathname === "/dashboard") {
@@ -79,7 +79,7 @@ export default function Header({ title, icon, rightActions }: HeaderProps) {
           {/* Brand Name on Left */}
           <Link href="/dashboard/otp" className="flex items-center hover:opacity-90 transition-opacity">
             <span className="text-xl font-bold text-[#003d9b] tracking-tight">
-              Radheshyam Medical
+              Sitaram Medical
             </span>
           </Link>
 

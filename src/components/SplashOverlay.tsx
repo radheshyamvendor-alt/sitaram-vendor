@@ -56,7 +56,7 @@ export default function SplashOverlay() {
         {/* Brand Name */}
         <div className="text-center space-y-1.5">
           <h1 className="text-3xl font-extrabold tracking-tight text-white drop-shadow-md">
-            Radheshyam Medical
+            Sitaram Medical
           </h1>
           <p className="text-xs uppercase tracking-widest text-blue-200/80 font-medium">
             Healthcare Logistics & Pharmacy Network
