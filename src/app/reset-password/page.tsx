@@ -88,47 +88,28 @@ function ResetPasswordForm() {
 
   return (
     <>
-      {/* Header card resembling step details */}
-      <div className="mb-10 bg-surface-container-lowest rounded-xl p-4 flex items-center gap-4 shadow-sm border border-outline-variant">
-        <div className="bg-primary-container/20 w-12 h-12 rounded-full flex items-center justify-center text-primary">
-          <span className="material-symbols-outlined text-[24px]">security</span>
-        </div>
-        <div>
-          <p className="font-label-md text-label-md text-on-surface-variant mb-0.5">Account Security</p>
-          <h1 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Set Password</h1>
-        </div>
-      </div>
-
       {/* Error/Success Feedbacks */}
       {errorMsg && (
-        <div className="mb-6 p-3 bg-error-container/30 border border-error text-error text-sm rounded-xl flex items-center gap-2">
+        <div className="mb-4 p-3 bg-error-container/30 border border-error text-error text-sm rounded-xl flex items-center gap-2">
           <span className="material-symbols-outlined text-[18px]">error</span>
           <span>{errorMsg}</span>
         </div>
       )}
       {successMsg && (
-        <div className="mb-6 p-3 bg-tertiary-container/10 border border-tertiary-container text-tertiary-container text-sm rounded-xl flex items-center gap-2">
+        <div className="mb-4 p-3 bg-tertiary-container/10 border border-tertiary-container text-tertiary-container text-sm rounded-xl flex items-center gap-2">
           <span className="material-symbols-outlined text-[18px]">check_circle</span>
           <span>{successMsg}</span>
         </div>
       )}
 
       {/* Reset Password Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="flex-grow flex flex-col justify-between">
-        <div className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <div className="space-y-4">
           {/* Email Address */}
-          <div className="space-y-1.5 group">
-            <label
-              className={`font-label-md text-label-md ml-1 transition-colors ${
-                focusedField === "email" ? "text-primary" : "text-on-surface-variant"
-              }`}
-              htmlFor="email"
-            >
-              Registered Email Address
-            </label>
-            <div className="relative">
+          <div className="space-y-1 group">
+            <div className="relative flex items-center">
               <span
-                className={`material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[20px] transition-colors ${
+                className={`material-symbols-outlined pointer-events-none flex items-center justify-center h-5 w-5 absolute left-4 top-1/2 -translate-y-1/2 text-[20px] leading-none transition-colors ${
                   focusedField === "email" ? "text-primary" : "text-on-surface-variant"
                 }`}
                 style={{ fontVariationSettings: focusedField === "email" ? "'FILL' 1" : "'FILL' 0" }}
@@ -139,9 +120,9 @@ function ResetPasswordForm() {
                 {...registerField("email")}
                 onFocus={() => setFocusedField("email")}
                 onBlur={() => setFocusedField(null)}
-                className="w-full pl-12 pr-4 py-3.5 bg-surface-container-lowest border border-outline-variant rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all font-body-md text-body-md placeholder:text-outline/60"
+                className="w-full pl-12 pr-4 h-14 bg-surface-container-lowest border border-outline-variant rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-base leading-normal placeholder:text-outline/60"
                 id="email"
-                placeholder="chemist@gmail.com"
+                placeholder="Registered Email Address"
                 type="email"
                 disabled={isSubmitting}
               />
@@ -150,18 +131,10 @@ function ResetPasswordForm() {
           </div>
 
           {/* Reset Token */}
-          <div className="space-y-1.5 group">
-            <label
-              className={`font-label-md text-label-md ml-1 transition-colors ${
-                focusedField === "token" ? "text-primary" : "text-on-surface-variant"
-              }`}
-              htmlFor="token"
-            >
-              Reset Token
-            </label>
-            <div className="relative">
+          <div className="space-y-1 group">
+            <div className="relative flex items-center">
               <span
-                className={`material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[20px] transition-colors ${
+                className={`material-symbols-outlined pointer-events-none flex items-center justify-center h-5 w-5 absolute left-4 top-1/2 -translate-y-1/2 text-[20px] leading-none transition-colors ${
                   focusedField === "token" ? "text-primary" : "text-on-surface-variant"
                 }`}
                 style={{ fontVariationSettings: focusedField === "token" ? "'FILL' 1" : "'FILL' 0" }}
@@ -172,9 +145,9 @@ function ResetPasswordForm() {
                 {...registerField("token")}
                 onFocus={() => setFocusedField("token")}
                 onBlur={() => setFocusedField(null)}
-                className="w-full pl-12 pr-4 py-3.5 bg-surface-container-lowest border border-outline-variant rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all font-body-md text-body-md placeholder:text-outline/60"
+                className="w-full pl-12 pr-4 h-14 bg-surface-container-lowest border border-outline-variant rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-base leading-normal placeholder:text-outline/60"
                 id="token"
-                placeholder="Enter verification token"
+                placeholder="Reset Token"
                 type="text"
                 disabled={isSubmitting}
               />
@@ -183,18 +156,10 @@ function ResetPasswordForm() {
           </div>
 
           {/* New Password */}
-          <div className="space-y-1.5 group">
-            <label
-              className={`font-label-md text-label-md ml-1 transition-colors ${
-                focusedField === "newPassword" ? "text-primary" : "text-on-surface-variant"
-              }`}
-              htmlFor="newPassword"
-            >
-              New Password
-            </label>
-            <div className="relative">
+          <div className="space-y-1 group">
+            <div className="relative flex items-center">
               <span
-                className={`material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[20px] transition-colors ${
+                className={`material-symbols-outlined pointer-events-none flex items-center justify-center h-5 w-5 absolute left-4 top-1/2 -translate-y-1/2 text-[20px] leading-none transition-colors ${
                   focusedField === "newPassword" ? "text-primary" : "text-on-surface-variant"
                 }`}
                 style={{ fontVariationSettings: focusedField === "newPassword" ? "'FILL' 1" : "'FILL' 0" }}
@@ -205,18 +170,18 @@ function ResetPasswordForm() {
                 {...registerField("newPassword")}
                 onFocus={() => setFocusedField("newPassword")}
                 onBlur={() => setFocusedField(null)}
-                className="w-full pl-12 pr-12 py-3.5 bg-surface-container-lowest border border-outline-variant rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all font-body-md text-body-md placeholder:text-outline/60"
+                className="w-full pl-12 pr-12 h-14 bg-surface-container-lowest border border-outline-variant rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-base leading-normal placeholder:text-outline/60"
                 id="newPassword"
-                placeholder="••••••••"
+                placeholder="New Password"
                 type={showNewPassword ? "text" : "password"}
                 disabled={isSubmitting}
               />
               <button
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-primary transition-colors"
+                className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center h-6 w-6 text-outline hover:text-primary transition-colors focus:outline-none"
                 onClick={() => setShowNewPassword(!showNewPassword)}
                 type="button"
               >
-                <span className="material-symbols-outlined text-[20px]">
+                <span className="material-symbols-outlined text-[20px] leading-none select-none">
                   {showNewPassword ? "visibility_off" : "visibility"}
                 </span>
               </button>
@@ -225,18 +190,10 @@ function ResetPasswordForm() {
           </div>
 
           {/* Confirm Password */}
-          <div className="space-y-1.5 group">
-            <label
-              className={`font-label-md text-label-md ml-1 transition-colors ${
-                focusedField === "confirmPassword" ? "text-primary" : "text-on-surface-variant"
-              }`}
-              htmlFor="confirmPassword"
-            >
-              Confirm Password
-            </label>
-            <div className="relative">
+          <div className="space-y-1 group">
+            <div className="relative flex items-center">
               <span
-                className={`material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[20px] transition-colors ${
+                className={`material-symbols-outlined pointer-events-none flex items-center justify-center h-5 w-5 absolute left-4 top-1/2 -translate-y-1/2 text-[20px] leading-none transition-colors ${
                   focusedField === "confirmPassword" ? "text-primary" : "text-on-surface-variant"
                 }`}
                 style={{ fontVariationSettings: focusedField === "confirmPassword" ? "'FILL' 1" : "'FILL' 0" }}
@@ -247,18 +204,18 @@ function ResetPasswordForm() {
                 {...registerField("confirmPassword")}
                 onFocus={() => setFocusedField("confirmPassword")}
                 onBlur={() => setFocusedField(null)}
-                className="w-full pl-12 pr-12 py-3.5 bg-surface-container-lowest border border-outline-variant rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all font-body-md text-body-md placeholder:text-outline/60"
+                className="w-full pl-12 pr-12 h-14 bg-surface-container-lowest border border-outline-variant rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-base leading-normal placeholder:text-outline/60"
                 id="confirmPassword"
-                placeholder="••••••••"
+                placeholder="Confirm Password"
                 type={showConfirmPassword ? "text" : "password"}
                 disabled={isSubmitting}
               />
               <button
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-primary transition-colors"
+                className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center h-6 w-6 text-outline hover:text-primary transition-colors focus:outline-none"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 type="button"
               >
-                <span className="material-symbols-outlined text-[20px]">
+                <span className="material-symbols-outlined text-[20px] leading-none select-none">
                   {showConfirmPassword ? "visibility_off" : "visibility"}
                 </span>
               </button>
@@ -270,7 +227,7 @@ function ResetPasswordForm() {
         </div>
 
         {/* CTA Section */}
-        <div className="mt-10 space-y-6">
+        <div className="mt-6 space-y-3">
           <button
             className="w-full h-14 bg-primary text-on-primary rounded-xl font-label-md text-label-md flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all hover:bg-on-primary-fixed-variant disabled:opacity-75 disabled:cursor-not-allowed"
             type="submit"
@@ -285,10 +242,7 @@ function ResetPasswordForm() {
                 <span>Updating Password...</span>
               </>
             ) : (
-              <>
-                <span>Update Password</span>
-                <span className="material-symbols-outlined">check_circle</span>
-              </>
+              <span>Update Password</span>
             )}
           </button>
 
@@ -298,10 +252,6 @@ function ResetPasswordForm() {
               Log In
             </Link>
           </p>
-
-          <div className="pt-6 border-t border-outline-variant text-center">
-            <p className="text-[10px] text-outline uppercase tracking-widest">© 2026 Sitaram Medical Group. All Rights Reserved.</p>
-          </div>
         </div>
       </form>
     </>
@@ -310,23 +260,11 @@ function ResetPasswordForm() {
 
 export default function ResetPassword() {
   return (
-    <main className="min-h-screen flex flex-col px-margin-mobile pt-12 pb-10 max-w-md mx-auto relative">
-      {/* Subtle Background Decorations */}
-      <div className="fixed -bottom-24 -right-24 w-64 h-64 bg-primary-container/20 rounded-full blur-3xl -z-10"></div>
-      <div className="fixed top-1/4 -left-12 w-48 h-48 bg-secondary-container/10 rounded-full blur-2xl -z-10"></div>
-
-      {/* Brand & Back Button */}
-      <div className="flex items-center justify-between mb-8">
-        <Link
-          href={AUTH_CONSTANTS.ROUTES.LOGIN}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-lowest shadow-sm border border-outline-variant text-on-surface-variant active:scale-95 transition-transform"
-          aria-label="Go back to login"
-        >
-          <span className="material-symbols-outlined">arrow_back</span>
-        </Link>
-        <span className="font-headline-md text-headline-md font-bold text-primary text-center">Sitaram Medical</span>
-        <div className="w-10"></div> {/* Spacer for symmetry */}
-      </div>
+    <main className="min-h-screen flex flex-col justify-center px-margin-mobile py-12 max-w-md mx-auto relative">
+      {/* Brand Title */}
+      <h1 className="font-headline-md text-headline-md font-bold text-primary text-center mb-6">
+        Set Password
+      </h1>
 
       {/* Form with Suspense Wrapper */}
       <Suspense

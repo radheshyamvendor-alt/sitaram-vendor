@@ -58,3 +58,72 @@ export function getChemistIdFromToken(tokenString?: string | null): {
     isExpired: false,
   };
 }
+
+export function getUserFromToken(tokenString?: string | null): {
+  id?: string;
+  name: string;
+  email: string;
+  mobile: string;
+  location: string;
+} | null {
+  const token = tokenString || getLocalAccessToken();
+  if (!token) return null;
+
+  const payload = parseJwtPayload(token);
+  if (!payload) return null;
+
+  const name =
+    payload.name ||
+    payload.Name ||
+    payload.fullName ||
+    payload.FullName ||
+    payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] ||
+    payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname"] ||
+    payload.unique_name ||
+    "";
+
+  const email =
+    payload.email ||
+    payload.Email ||
+    payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"] ||
+    payload.sub ||
+    "";
+
+  const mobile =
+    payload.mobile ||
+    payload.Mobile ||
+    payload.phone ||
+    payload.Phone ||
+    payload.phoneNumber ||
+    payload.PhoneNumber ||
+    payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/mobilephone"] ||
+    "";
+
+  const location =
+    payload.location ||
+    payload.Location ||
+    payload.address ||
+    payload.Address ||
+    "";
+
+  const id =
+    payload.chemistId ||
+    payload.id ||
+    payload.userId ||
+    payload.sub ||
+    payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] ||
+    undefined;
+
+  if (!name && !email && !mobile) {
+    return null;
+  }
+
+  return {
+    id: id ? String(id) : undefined,
+    name: name || "Registered Chemist",
+    email,
+    mobile,
+    location,
+  };
+}
+

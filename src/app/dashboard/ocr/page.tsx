@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
 import { tokenStorage } from "@/lib/tokenStorage";
 import { getChemistIdFromToken } from "@/lib/jwt";
@@ -31,9 +31,11 @@ interface OcrResult {
   medicines: ExtractedMedicine[];
 }
 
-export default function OcrPage() {
-  const { user, logout } = useAuth();
+function OcrContent() {
+  const { user, isLoading: authLoading, logout } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const processedAttachmentRef = useRef<string>("");
 
   const [isOcrProcessing, setIsOcrProcessing] = useState(false);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
@@ -43,6 +45,62 @@ export default function OcrPage() {
   // Pending result awaiting user review
   const [pendingResult, setPendingResult] = useState<OcrResult | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+
+  // Automatically load & scan email attachment if redirected from Notification Bell
+  useEffect(() => {
+    if (authLoading) return;
+
+    const messageId = searchParams.get("messageId");
+    const attachmentId = searchParams.get("attachmentId");
+    const filename = searchParams.get("filename") || "prescription.pdf";
+    const userEmail = user?.email || tokenStorage.getUserData()?.email;
+
+    if (messageId && attachmentId && userEmail) {
+      const attachmentKey = `${messageId}:${attachmentId}`;
+      if (processedAttachmentRef.current === attachmentKey) return;
+      processedAttachmentRef.current = attachmentKey;
+
+      loadAndProcessGmailAttachment(userEmail, messageId, attachmentId, filename);
+    }
+  }, [searchParams, user, authLoading]);
+
+  const loadAndProcessGmailAttachment = async (
+    email: string,
+    messageId: string,
+    attachmentId: string,
+    filename: string
+  ) => {
+    setIsOcrProcessing(true);
+    setOcrError(null);
+
+    try {
+      const res = await fetch(
+        `/api/auth/gmail/attachment?email=${encodeURIComponent(
+          email
+        )}&messageId=${encodeURIComponent(messageId)}&attachmentId=${encodeURIComponent(
+          attachmentId
+        )}`
+      );
+      const data = await res.json();
+      if (!data.success || !data.base64) {
+        throw new Error(data.error || "Failed to download email attachment");
+      }
+
+      // Convert base64 to File object
+      const byteCharacters = atob(data.base64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const file = new File([byteArray], filename, { type: "application/pdf" });
+
+      await processFileOcr(file);
+    } catch (err: any) {
+      setOcrError(err?.message || "Failed to load prescription from email attachment.");
+      setIsOcrProcessing(false);
+    }
+  };
 
   const handleAddMedicine = () => {
     if (!pendingResult) return;
@@ -111,6 +169,15 @@ export default function OcrPage() {
       return;
     }
 
+    // Client-side 5MB limit check — show error immediately without API round-trip
+    const MAX_SIZE_MB = 5;
+    const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+    if (selectedFile.size > MAX_SIZE_BYTES) {
+      const sizeMB = (selectedFile.size / (1024 * 1024)).toFixed(2);
+      setOcrError(`File is too large (${sizeMB} MB). Maximum allowed file size is ${MAX_SIZE_MB} MB. Please compress the image or use a smaller PDF.`);
+      return;
+    }
+
     setIsOcrProcessing(true);
     setOcrError(null);
     setPendingResult(null);
@@ -143,7 +210,6 @@ export default function OcrPage() {
   const handleSubmitOrder = async () => {
     if (!pendingResult) return;
 
-    // Verify active JWT session token and extract active chemistId from token payload
     const tokenInfo = getChemistIdFromToken();
     if (tokenInfo.isExpired || !tokenInfo.chemistId) {
       setOcrError(tokenInfo.error || "Session expired. Please login again.");
@@ -158,7 +224,6 @@ export default function OcrPage() {
 
     const activeChemistId = tokenInfo.chemistId;
 
-    // Mobile number validation if present
     if (pendingResult.patient.mobile != null) {
       const mobileDigits = String(pendingResult.patient.mobile).replace(/\D/g, "");
       if (mobileDigits.length !== 10) {
@@ -174,10 +239,11 @@ export default function OcrPage() {
     setIsSubmittingOrder(true);
     setOcrError(null);
 
-    // Build structured JSON string storing medicine name and quantity
     const medicinesJson = JSON.stringify(
       pendingResult.medicines.map((m) => ({ name: m.name, quantity: m.quantity }))
     );
+
+    const currentMessageId = searchParams.get("messageId") || undefined;
 
     try {
       const result = await createDirectOrder({
@@ -190,10 +256,10 @@ export default function OcrPage() {
         medicines: medicinesJson,
         chemistId: activeChemistId,
         chemistEmail: user?.email || tokenStorage.getUserData()?.email || undefined,
+        gmailMessageId: currentMessageId,
       });
 
       if (result.success) {
-        // Redirect directly to Orders page
         router.push("/dashboard/otp");
       } else {
         setOcrError(result.error || "Failed to submit order. Please try again.");
@@ -207,9 +273,11 @@ export default function OcrPage() {
   };
 
   const resetScanner = () => {
+    processedAttachmentRef.current = "";
     setPendingResult(null);
     setOcrError(null);
     setIsEditing(false);
+    router.replace("/dashboard/ocr");
   };
 
   return (
@@ -218,7 +286,6 @@ export default function OcrPage() {
 
       <main className="max-w-[800px] mx-auto px-margin-mobile md:px-margin-desktop py-xl">
         <div className="space-y-6">
-
           {ocrError && (
             <div className="p-4 bg-error-container/20 border border-error/20 text-error rounded-xl flex items-center gap-3 text-sm">
               <span className="material-symbols-outlined text-[18px]">error</span>
@@ -238,10 +305,8 @@ export default function OcrPage() {
 
               {isOcrProcessing ? (
                 <div className="h-64 border border-primary/20 rounded-2xl bg-surface-container-lowest flex flex-col items-center justify-center relative overflow-hidden p-6 shadow-inner">
-                  {/* Top laser scan line */}
                   <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent shadow-[0_0_12px_#003d9b] animate-pulse"></div>
                   
-                  {/* Glowing Spinner Container */}
                   <div className="relative flex items-center justify-center">
                     <div className="absolute w-16 h-16 rounded-full bg-primary/10 animate-ping"></div>
                     <div className="w-12 h-12 rounded-full border-3 border-primary/20 border-t-primary animate-spin"></div>
@@ -295,7 +360,6 @@ export default function OcrPage() {
           {/* STEP 2: Review extracted details & Create Order */}
           {pendingResult && (
             <div className="bg-surface border border-outline-variant shadow-sm rounded-xl p-6 glass-card space-y-5">
-              {/* Review header */}
               <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 text-amber-700 rounded-xl">
                 <span className="material-symbols-outlined text-[22px]">rate_review</span>
                 <div>
@@ -304,7 +368,6 @@ export default function OcrPage() {
                 </div>
               </div>
 
-              {/* Patient info card */}
               <div className="border border-outline-variant rounded-xl p-4 bg-surface-container-lowest space-y-4">
                 <div className="flex justify-between items-center border-b border-outline-variant pb-2">
                   <h4 className="font-bold text-on-surface text-sm uppercase tracking-wider text-primary">Patient Profile</h4>
@@ -392,7 +455,6 @@ export default function OcrPage() {
                 )}
               </div>
 
-              {/* Extracted medicines list */}
               <div className="border border-outline-variant rounded-xl p-4 bg-surface-container-lowest space-y-3">
                 <div className="flex items-center justify-between border-b border-outline-variant pb-2 gap-2">
                   <h4 className="font-bold text-on-surface text-xs sm:text-sm uppercase tracking-wider text-primary truncate">
@@ -476,7 +538,6 @@ export default function OcrPage() {
                 </div>
               </div>
 
-              {/* Direct Order Creation Action */}
               <div className="flex flex-col sm:flex-row gap-3 pt-1">
                 <button
                   onClick={handleSubmitOrder}
@@ -509,11 +570,18 @@ export default function OcrPage() {
               </div>
             </div>
           )}
-
         </div>
       </main>
 
       <BottomNav />
     </div>
+  );
+}
+
+export default function OcrPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background trust-gradient flex items-center justify-center">Loading OCR Scanner...</div>}>
+      <OcrContent />
+    </Suspense>
   );
 }

@@ -21,4 +21,40 @@ model Order {
   updatedAt          DateTime @updatedAt
   chemistId          String?
   chemistEmail       String?
+
+  // Performance indexes for dashboard queries
+  @@index([chemistEmail])
+  @@index([chemistEmail, status])
+  @@index([chemistEmail, createdAt])
+  @@index([status])
+}
+
+model GmailConnection {
+  id                    String    @id @default(uuid())
+  chemistEmail          String    @unique
+  gmailAddress          String
+  encryptedRefreshToken String
+  historyId             String?
+  watchExpiry           DateTime?
+  isActive              Boolean   @default(true)
+  connectedAt           DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model GmailPrescription {
+  id           String   @id @default(uuid())
+  chemistEmail String
+  sender       String?
+  subject      String?
+  filename     String
+  attachmentId String
+  messageId    String
+  status       String   @default("PENDING") // PENDING, PROCESSED, ORDERED
+  receivedAt   DateTime @default(now())
+
+  // Performance indexes for notification hub and sync queries
+  @@index([chemistEmail])
+  @@index([chemistEmail, status])
+  @@index([chemistEmail, receivedAt])
+  @@unique([chemistEmail, messageId, filename])
 }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // Normalization function to remove punctuation, spaces, and convert to lowercase
 function normalizeString(str: string): string {
   if (!str) return "";
@@ -245,6 +247,19 @@ export async function POST(req: NextRequest) {
 
     if (!file) {
       return NextResponse.json({ success: false, error: "No file provided" }, { status: 400 });
+    }
+
+    // Enforce 5MB file size limit
+    const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      return NextResponse.json(
+        {
+          success: false,
+          error: `File is too large (${fileSizeMB} MB). Maximum allowed size is 5 MB. Please compress the image or use a smaller PDF.`,
+        },
+        { status: 413 }
+      );
     }
 
     const serviceUrl = process.env.PADDLEOCR_SERVICE_URL || "https://paddle-ocr-dwox.onrender.com/ocr";

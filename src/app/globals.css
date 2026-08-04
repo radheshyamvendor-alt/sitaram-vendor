@@ -21,6 +21,19 @@
   }
 }
 
+@keyframes splashBar {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
+.animate-splash-bar {
+  animation: splashBar 2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
 body {
   min-height: 100dvh;
 }

@@ -9,6 +9,7 @@ export default function BottomNav() {
   const navItems = [
     { name: "Orders", href: "/dashboard/otp", icon: "local_shipping" },
     { name: "OCR", href: "/dashboard/ocr", icon: "document_scanner" },
+    { name: "Inbox", href: "/dashboard/notifications", icon: "mail" },
     { name: "Profile", href: "/profile", icon: "person" },
   ];
 

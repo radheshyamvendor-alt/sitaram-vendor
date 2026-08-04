@@ -5,6 +5,7 @@ import useAuth from "@/hooks/useAuth";
 import Header from "@/components/dashboard/Header";
 import BottomNav from "@/components/dashboard/BottomNav";
 import { LogOut } from "lucide-react";
+import GmailConnectCard from "@/components/dashboard/GmailConnectCard";
 
 export default function Profile() {
   const { user, logout, refreshProfile } = useAuth();
@@ -63,6 +64,13 @@ export default function Profile() {
             </button>
           </div>
         </div>
+
+        {/* Gmail Integration Card */}
+        {user?.email && (
+          <div className="mt-6">
+            <GmailConnectCard chemistEmail={user.email} />
+          </div>
+        )}
       </main>
 
       {/* Shared Responsive Bottom Navigation */}

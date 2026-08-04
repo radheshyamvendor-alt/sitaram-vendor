@@ -396,6 +396,7 @@ export interface DirectOrderInput {
   medicines?: string;
   chemistId?: string;
   chemistEmail?: string;
+  gmailMessageId?: string;
 }
 
 export async function createDirectOrder(input: DirectOrderInput) {
@@ -429,8 +430,25 @@ export async function createDirectOrder(input: DirectOrderInput) {
       data: orderData,
     });
 
+    if (input.gmailMessageId && input.chemistEmail) {
+      try {
+        await prisma.gmailPrescription.updateMany({
+          where: {
+            chemistEmail: input.chemistEmail,
+            messageId: input.gmailMessageId,
+          },
+          data: {
+            status: "ORDERED",
+          },
+        });
+      } catch (err) {
+        console.warn("Failed to update GmailPrescription status to ORDERED:", err);
+      }
+    }
+
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/otp");
+    revalidatePath("/dashboard/notifications");
     return { success: true, data: order };
   } catch (error) {
     console.error("Failed to create direct order:", error);
