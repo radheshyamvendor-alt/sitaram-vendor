@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 import QueryProvider from "@/providers/QueryProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
-
 import { CartProvider } from "@/providers/CartProvider";
+import SplashOverlay from "@/components/SplashOverlay";
 
 export const metadata: Metadata = {
-  title: "Sitaram Medical - Authentication Portal",
+  title: "Radheshyam Medical - Authentication Portal",
   description: "Secured Access for Medical Professionals & Pharmacies",
 };
 
@@ -28,6 +28,7 @@ export default function RootLayout({
         <QueryProvider>
           <AuthProvider>
             <CartProvider>
+              <SplashOverlay />
               {children}
             </CartProvider>
           </AuthProvider>

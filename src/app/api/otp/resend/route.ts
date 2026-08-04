@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resendOtpApi } from "@/app/actions/order";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
   try {
     const { prescriptionNo } = await req.json();

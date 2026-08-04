@@ -44,7 +44,7 @@ export function formatMedicinesDisplay(medicinesStr?: string | null): string {
 }
 
 export default function OTPVerificationPage() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
 
   // OTP Modal Overlay States
@@ -88,6 +88,7 @@ export default function OTPVerificationPage() {
   const { data: dashboardResult, isLoading, error } = useQuery({
     queryKey: ["dashboard-overview", page, user?.email, debouncedSearch, activeChemistId],
     queryFn: () => getDashboardOverview(page, pageSize, user?.email, debouncedSearch, activeChemistId),
+    enabled: !authLoading,
   });
 
   // Start Delivery mutation

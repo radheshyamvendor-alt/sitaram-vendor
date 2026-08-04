@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
+import NotificationBell from "@/components/dashboard/NotificationBell";
 
 interface HeaderProps {
   title?: string;
@@ -13,10 +14,12 @@ interface HeaderProps {
 
 export default function Header({ title, icon, rightActions }: HeaderProps) {
   const { logout, user } = useAuth();
+
+
   const pathname = usePathname();
 
   // Determine dynamic defaults based on pathname
-  let defaultTitle = "Sitaram Medical";
+  let defaultTitle = "Radheshyam Medical";
   let defaultIcon = "medical_services";
 
   if (pathname === "/dashboard") {
@@ -64,6 +67,7 @@ export default function Header({ title, icon, rightActions }: HeaderProps) {
   const links = [
     { name: "Orders", href: "/dashboard/otp" },
     { name: "Scan Prescription", href: "/dashboard/ocr" },
+    { name: "Email Prescriptions", href: "/dashboard/notifications" },
     { name: "Profile", href: "/profile" },
   ];
 
@@ -72,10 +76,10 @@ export default function Header({ title, icon, rightActions }: HeaderProps) {
       {/* ── DESKTOP HEADER ── */}
       <header className="hidden md:block w-full bg-white border-b border-[#e0e3e5] sticky top-0 z-50 shadow-sm transition-all duration-300">
         <div className="max-w-[1440px] xl:max-w-[1600px] 2xl:max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-8 h-16 relative flex justify-between items-center">
-          {/* Brand Name on Left (No Logo Icon) */}
+          {/* Brand Name on Left */}
           <Link href="/dashboard/otp" className="flex items-center hover:opacity-90 transition-opacity">
             <span className="text-xl font-bold text-[#003d9b] tracking-tight">
-              Sitaram Medical
+              Radheshyam Medical
             </span>
           </Link>
 
@@ -106,8 +110,10 @@ export default function Header({ title, icon, rightActions }: HeaderProps) {
             })}
           </nav>
 
-          {/* User profile / Logout on Right */}
-          <div className="flex items-center gap-4">
+          {/* Top Right Actions: Notification Bell + Profile Dropdown */}
+          <div className="flex items-center gap-3">
+            <NotificationBell />
+
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -173,17 +179,11 @@ export default function Header({ title, icon, rightActions }: HeaderProps) {
           </h1>
         </div>
         {rightActions || (
-          <div className="flex items-center gap-2">
-            <Link
-              href="/profile"
-              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors text-on-surface-variant"
-            >
-              <span className="material-symbols-outlined">person</span>
-            </Link>
+          <div className="flex items-center gap-3">
+            <NotificationBell />
           </div>
         )}
       </header>
     </>
   );
 }
-
