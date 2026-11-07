@@ -194,7 +194,7 @@ function OcrContent() {
 
       const resData = await response.json();
       if (resData.success) {
-        setPendingResult(resData.data);
+        setPendingResult(resData);
       } else {
         setOcrError(resData.error || "OCR extraction failed. Please try again.");
       }

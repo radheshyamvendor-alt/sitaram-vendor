@@ -38,9 +38,23 @@ export function NotificationProvider({
 }) {
   const [notifications, setNotifications] = useState<EmailNotification[]>([]);
   const seenIds = useRef<Set<string>>(new Set());
+  const lastFetchedAtRef = useRef<number>(0);
+  const isFetchingRef = useRef<boolean>(false);
 
-  const fetchPrescriptions = useCallback(async (email: string) => {
+  const fetchPrescriptions = useCallback(async (email: string, force = false) => {
     if (!email) return;
+
+    const now = Date.now();
+    // Enforce 30-second cooldown unless forced (e.g. manual refresh)
+    if (!force && now - lastFetchedAtRef.current < 30000) {
+      return;
+    }
+    // Prevent concurrent overlapping requests
+    if (isFetchingRef.current) return;
+
+    isFetchingRef.current = true;
+    lastFetchedAtRef.current = now;
+
     try {
       const res = await fetch(`/api/auth/gmail/prescriptions?email=${encodeURIComponent(email)}`);
       const data = await res.json();
@@ -55,57 +69,20 @@ export function NotificationProvider({
             attachmentId: p.attachmentId,
             messageId: p.messageId,
             receivedAt: p.receivedAt,
-            read: p.status === "PROCESSED",
+            read: p.status !== "PENDING",
           };
         });
         setNotifications(loaded);
       }
     } catch {
       // ignore network errors
+    } finally {
+      isFetchingRef.current = false;
     }
   }, []);
 
-  // Fetch stored prescriptions ONCE on mount or email change
-  useEffect(() => {
-    fetchPrescriptions(chemistEmail);
-  }, [chemistEmail, fetchPrescriptions]);
-
-  // Single SSE connection for real-time events (zero polling)
-  useEffect(() => {
-    if (!chemistEmail) return;
-
-    const eventSource = new EventSource(
-      `/api/orders/email-received/stream?email=${encodeURIComponent(chemistEmail)}`
-    );
-
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data && data.messageId && !seenIds.current.has(data.messageId)) {
-          seenIds.current.add(data.messageId);
-          setNotifications((prev) => [
-            {
-              id: data.id || data.messageId,
-              sender: data.sender || "Patient Email",
-              subject: data.subject || "Prescription PDF",
-              filename: data.filename || "prescription.pdf",
-              attachmentId: data.attachmentId,
-              messageId: data.messageId,
-              receivedAt: data.receivedAt || new Date().toISOString(),
-              read: false,
-            },
-            ...prev,
-          ]);
-        }
-      } catch {
-        // ignore parse errors
-      }
-    };
-
-    return () => {
-      eventSource.close();
-    };
-  }, [chemistEmail]);
+  // Manual only: Zero automatic background timers or mount calls.
+  // Prescriptions are only fetched when explicitly requested (e.g. clicking the Bell icon or Sync button).
 
   const markAllAsRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
@@ -140,7 +117,7 @@ export function NotificationProvider({
   };
 
   const refreshNotifications = async () => {
-    await fetchPrescriptions(chemistEmail);
+    await fetchPrescriptions(chemistEmail, true);
   };
 
   const unreadCount = notifications.filter((n) => !n.read).length;

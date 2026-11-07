@@ -122,7 +122,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("Token refresh returned success: false");
       }
     } catch (err) {
-      console.error("Silent refresh failed:", err);
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("Silent refresh failed:", err);
+      }
       logout();
     }
   };
@@ -209,17 +211,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
 
           scheduleNextRefresh(expiration);
-        } else if (!cachedUser) {
+        } else {
+          // Token refresh was rejected by server
           tokenStorage.clearTokens();
           setLocalAccessToken(null);
           setUser(null);
         }
-      } catch (err) {
-        console.error("Session restoration failed:", err);
-        if (!cachedUser) {
-          tokenStorage.clearTokens();
-          setLocalAccessToken(null);
-          setUser(null);
+      } catch (err: any) {
+        // Expired or invalid refresh token (e.g. 400 Bad Request / 401 Unauthorized)
+        // Clean up stale tokens so subsequent page visits don't re-trigger 400 errors
+        tokenStorage.clearTokens();
+        setLocalAccessToken(null);
+        setUser(null);
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("Session refresh token expired or invalid, cleared stale session.");
         }
       } finally {
         setIsLoading(false);
@@ -373,7 +378,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         refreshProfile,
       }}
     >
-      <NotificationProvider chemistEmail={user?.email || ""}>
+      <NotificationProvider chemistEmail={isAuthenticated && user?.email ? user.email : ""}>
         {children}
       </NotificationProvider>
     </AuthContext.Provider>
