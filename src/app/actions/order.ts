@@ -1,7 +1,6 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
 import axios from "axios";
 
 export interface PatientInput {
@@ -48,8 +47,6 @@ export async function createOrder(input: CreateOrderInput) {
       },
     });
 
-    revalidatePath("/dashboard");
-    revalidatePath("/dashboard/otp");
     return { success: true, data: order };
   } catch (error) {
     console.error("Failed to create order:", error);
@@ -191,8 +188,6 @@ export async function startDelivery(orderId: string) {
       },
     });
     
-    revalidatePath("/dashboard");
-    revalidatePath("/dashboard/otp");
     return { success: true, data: order, mockOtp };
   } catch (error) {
     console.error("Failed to start delivery:", error);
@@ -240,8 +235,6 @@ export async function verifyOtpApi(prescriptionNo: string, otp: string, accessTo
           data: { status: "COMPLETED" },
         });
       }
-      revalidatePath("/dashboard");
-      revalidatePath("/dashboard/otp");
       return { success: true, message: apiMessage || "OTP verified successfully" };
     }
 
@@ -302,8 +295,6 @@ export async function completeOrderLocal(prescriptionNo: string) {
         data: { status: "COMPLETED" },
       });
     }
-    revalidatePath("/dashboard");
-    revalidatePath("/dashboard/otp");
     return { success: true };
   } catch (error) {
     console.error("Failed to update local order status:", error);
@@ -329,8 +320,6 @@ export async function deleteOrder(orderId: string) {
       where: { id: orderId },
     });
 
-    revalidatePath("/dashboard");
-    revalidatePath("/dashboard/otp");
     return { success: true };
   } catch (error) {
     console.error("Failed to delete order:", error);
@@ -376,8 +365,6 @@ export async function updateOrder(orderId: string, input: UpdateOrderInput) {
       },
     });
 
-    revalidatePath("/dashboard");
-    revalidatePath("/dashboard/otp");
     return { success: true, data: updatedOrder };
   } catch (error) {
     console.error("Failed to update order:", error);
@@ -446,9 +433,6 @@ export async function createDirectOrder(input: DirectOrderInput) {
       }
     }
 
-    revalidatePath("/dashboard");
-    revalidatePath("/dashboard/otp");
-    revalidatePath("/dashboard/notifications");
     return { success: true, data: order };
   } catch (error) {
     console.error("Failed to create direct order:", error);

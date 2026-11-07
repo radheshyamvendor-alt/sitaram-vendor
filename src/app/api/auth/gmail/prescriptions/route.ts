@@ -63,11 +63,21 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error("Failed to fetch gmail prescriptions:", error);
-    return NextResponse.json(
-      { error: error?.message || "Failed to fetch prescriptions" },
-      { status: 500 }
-    );
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("Failed to fetch gmail prescriptions (DB may be paused or unreachable):", error?.message || error);
+    }
+    return NextResponse.json({
+      success: true,
+      prescriptions: [],
+      unreadCount: 0,
+      pagination: {
+        page: 1,
+        pageSize: 10,
+        totalCount: 0,
+        totalPages: 1,
+      },
+      warning: "Database currently unreachable",
+    });
   }
 }
 

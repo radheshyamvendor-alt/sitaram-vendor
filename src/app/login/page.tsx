@@ -49,7 +49,6 @@ export default function Login() {
         password: values.password,
       });
     } catch (err) {
-      console.error(err);
       setErrorMsg(err instanceof Error ? err.message : "Invalid credentials. Please try again.");
     } finally {
       setIsSubmitting(false);

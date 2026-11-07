@@ -6,10 +6,18 @@ import { useRouter } from "next/navigation";
 import { useNotifications } from "@/context/NotificationContext";
 
 export default function NotificationBell() {
-  const { notifications, unreadCount, markAllAsRead, markAsRead } = useNotifications();
+  const { notifications, unreadCount, markAllAsRead, markAsRead, refreshNotifications } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  const handleToggle = () => {
+    const nextState = !isOpen;
+    if (nextState) {
+      refreshNotifications();
+    }
+    setIsOpen(nextState);
+  };
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -36,7 +44,7 @@ export default function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       {/* Bell Button with Badge Counter */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         className="relative p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-all text-gray-600 hover:text-blue-700 flex items-center justify-center"
         aria-label="Notifications"
         title="Email Prescription Notifications"

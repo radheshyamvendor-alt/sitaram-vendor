@@ -85,8 +85,10 @@ export default function OTPModal({
       return data;
     },
     onSuccess: (result) => {
+      setOtpValues(Array(6).fill(""));
       setSuccessMsg(result.message || "New OTP sent to patient's mobile.");
       setErrorMsg(null);
+      document.getElementById("otp-input-0")?.focus();
     },
     onError: (err: any) => {
       setErrorMsg(err.message || "Failed to resend OTP.");
@@ -164,6 +166,8 @@ export default function OTPModal({
   const handleResend = () => {
     setErrorMsg(null);
     setSuccessMsg(null);
+    setOtpValues(Array(6).fill(""));
+    document.getElementById("otp-input-0")?.focus();
     resendMutation.mutate();
   };
 
