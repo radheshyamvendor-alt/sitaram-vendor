@@ -186,21 +186,68 @@ function OcrContent() {
     const formData = new FormData();
     formData.append("file", selectedFile);
 
+    const ocrServiceUrl =
+      process.env.NEXT_PUBLIC_PADDLEOCR_SERVICE_URL ||
+      "https://paddle-ocr-dwox.onrender.com/ocr";
+
     try {
-      const response = await fetch("/api/ocr", {
+      const response = await fetch(ocrServiceUrl, {
         method: "POST",
         body: formData,
       });
 
-      const resData = await response.json();
-      if (resData.success) {
-        setPendingResult(resData);
-      } else {
-        setOcrError(resData.error || "OCR extraction failed. Please try again.");
+      if (!response.ok) {
+        throw new Error(`OCR service error (HTTP ${response.status})`);
       }
+
+      const resData = await response.json();
+      if (!resData.success) {
+        throw new Error(
+          resData.error || resData.detail || "OCR extraction failed. Please try again."
+        );
+      }
+
+      const ocrResult = resData.data || resData;
+      const prescriptionNumber: string = ocrResult.prescriptionNumber || "";
+      const ocrPatient = ocrResult.patient || {};
+      const ocrMedicines: any[] = ocrResult.medicines || [];
+
+      // Deduplicate medicines by name and clean
+      const verifiedMedicines: ExtractedMedicine[] = [];
+      for (const ocrMed of ocrMedicines) {
+        const ocrName: string = (ocrMed.name || "").trim();
+        if (ocrName.length < 2) continue;
+        const alreadyAdded = verifiedMedicines.some(
+          (item) => item.name.toLowerCase() === ocrName.toLowerCase()
+        );
+        if (!alreadyAdded) {
+          verifiedMedicines.push({
+            id: ocrMed.id ?? null,
+            name: ocrName,
+            price: ocrMed.price ?? null,
+            stock: ocrMed.stock ?? null,
+            quantity: Number(ocrMed.quantity) || 1,
+          });
+        }
+      }
+
+      const patientObj: ExtractedPatient = {
+        name: ocrPatient.name || null,
+        address: ocrPatient.address || null,
+        mobile: ocrPatient.mobile || null,
+        gender: ocrPatient.gender || null,
+        age: ocrPatient.age != null ? Number(ocrPatient.age) : null,
+      };
+
+      setPendingResult({
+        prescriptionNumber,
+        patient: patientObj,
+        medicines: verifiedMedicines,
+      });
     } catch (err) {
-      console.error(err);
-      const errMsg = err instanceof Error ? err.message : "Failed to communicate with OCR service.";
+      console.error("Direct OCR fetch error:", err);
+      const errMsg =
+        err instanceof Error ? err.message : "Failed to communicate with OCR service.";
       setOcrError(errMsg);
     } finally {
       setIsOcrProcessing(false);
